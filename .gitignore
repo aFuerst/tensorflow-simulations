@@ -1,3 +1,5 @@
 .vscode/
 checkpoints/
 chkpt/
+test/
+**/__pycache__/
