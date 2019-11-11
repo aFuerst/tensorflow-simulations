@@ -34,6 +34,9 @@ class Box:
             print("WARNING: Unable to fit in {0} atoms, could only place {1}".format(num_atoms, atoms.shape[0]))
         return atoms
 
+    def get_edges_as_tf(self):
+        return tf.constant(np.array([self._x, self._y, self._z]), name="edges")
+
 if __name__ == "__main__":
     size = 2.51939*2
     b = Box(size,size,size)

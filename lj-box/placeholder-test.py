@@ -33,32 +33,43 @@ num_iterations = steps // log_freq
 delta_t = totaltime / steps
 
 box = box.Box(bx, by, bz)
-positions = box.fill(1, ljatom_diameter)
+positions = box.fill(number_ljatom, ljatom_diameter)
 forces = np.asarray([[1,2,3]], dtype=np.float64)
 velocities = np.zeros(positions.shape, dtype=np.float64)
-edges = tf.constant(np.array([bx,by,bz]), name="edges")
+edges = box.get_edges_as_tf()
 
 position_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=positions.shape, name="position_placeholder_n")
 forces_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=forces.shape, name="forces_placeholder_n")
 velocities_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=velocities.shape, name="velocities_placeholder_n")
 
+@tf.function
+def run_one_iter(vel, pos, force):
+    vel_graph = vel + (force * (0.5*delta_t/ljatom_mass))
+    pos_graph = pos + (vel_graph * delta_t)
+    pos_graph = pos_graph % edges
+    vel_graph = vel_graph + (force * (0.5*delta_t/ljatom_mass))
+    return vel_graph, pos_graph, force
+
+def build_graph(num_iterations):
+    # build graph
+    v_g, p_g, f_g = run_one_iter(velocities_p, position_p, forces_p)
+    for i in range(num_iterations-1):
+        run_one_iter(v_g, p_g, f_g)
+    return v_g, p_g, f_g
+
 with tf.compat.v1.Session() as sess:
     sess.as_default()
     sess.run(tf.compat.v1.global_variables_initializer())
     writer = tf.compat.v1.summary.FileWriter('./test', sess.graph)
-    # build graph
-    for i in range(100):
-        velocities_p = velocities_p + (forces_p * (0.5*delta_t/ljatom_mass))
-        position_p = position_p + (velocities_p * delta_t)
-        position_p = position_p % edges
-        velocities_p = velocities_p + (forces_p * (0.5*delta_t/ljatom_mass))
+
+    v_g, p_g, f_g = build_graph(100)
     writer.add_graph(sess.graph)
     writer.close()
-    for x in range(1):
-        print(velocities, positions)
+
+    for x in range(10):
         a = time.time()
-        feed_dict = {velocities_p:velocities, forces_p:forces, position_p:positions}
-        velocities, positions, forces = sess.run([velocities_p, position_p, forces_p], feed_dict=feed_dict)
-        print(velocities, positions)
+        feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities}
+        velocities, positions, forces = sess.run([v_g, p_g, f_g], feed_dict=feed_dict)
+        # print(velocities, positions, forces)
         b = time.time()
-        # print(b-a)
+        print(b-a)
