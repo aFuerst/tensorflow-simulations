@@ -33,28 +33,44 @@ num_iterations = steps // log_freq
 delta_t = totaltime / steps
 
 box = box.Box(bx, by, bz)
-positions = tf.Variable(box.fill(number_ljatom, ljatom_diameter), name="positions")
-forces = tf.Variable(np.asarray([[1,2,3]], dtype=np.float64), name="forces")
-velocities = tf.Variable(np.zeros(positions.shape, dtype=np.float64), name="velocities")
-edges = tf.constant(np.array([bx,by,bz]), name="edges")
+positions = box.fill(number_ljatom, ljatom_diameter)
+forces = np.asarray([[1,2,3]], dtype=np.float64)
+velocities = np.zeros(positions.shape, dtype=np.float64)
+edges = box.get_edges_as_tf()
+
+position_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=positions.shape, name="position_placeholder_n")
+forces_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=forces.shape, name="forces_placeholder_n")
+velocities_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=velocities.shape, name="velocities_placeholder_n")
+
+@tf.function
+def run_one_iter(vel, pos, force):
+    vel_graph = vel + (force * (0.5*delta_t/ljatom_mass))
+    pos_graph = pos + (vel_graph * delta_t)
+    pos_graph = pos_graph % edges
+    # update forces
+    # compute energies
+    vel_graph = vel_graph + (force * (0.5*delta_t/ljatom_mass))
+    return vel_graph, pos_graph, force
+
+def build_graph(num_iterations):
+    # build graph
+    v_g, p_g, f_g = run_one_iter(velocities_p, position_p, forces_p)
+    for i in range(num_iterations-1):
+        run_one_iter(v_g, p_g, f_g)
+    return v_g, p_g, f_g
 
 with tf.compat.v1.Session() as sess:
     sess.as_default()
-    writer = tf.compat.v1.summary.FileWriter('./test', sess.graph)
     sess.run(tf.compat.v1.global_variables_initializer())
-    print("Delta t = {}".format(delta_t))
-    run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
-    run_metadata = tf.compat.v1.RunMetadata()
-    for x in range(5):
-        a = time.time()
-        for i in range(100):
-            velocities = velocities + (forces * (0.5*delta_t/ljatom_mass))
-            positions = positions + (velocities * delta_t)
-            positions = positions % edges
-        p = tf.print(positions, output_stream="file:///home/alfuerst/simulations/trace.txt")
-        writer.add_event(positions)
-        positions, velocities, p = sess.run([positions, velocities, p])
-        b = time.time()
-        print(b-a)
+    writer = tf.compat.v1.summary.FileWriter("./test", sess.graph)
+    v_g, p_g, f_g = build_graph(100)
     writer.add_graph(sess.graph)
     writer.close()
+
+    for x in range(10):
+        a = time.time()
+        feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities}
+        velocities, positions, forces = sess.run([v_g, p_g, f_g], feed_dict=feed_dict)
+        # print(velocities, positions, forces)
+        b = time.time()
+        print(b-a)
