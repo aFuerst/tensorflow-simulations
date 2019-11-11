@@ -14,7 +14,6 @@ class Box:
 
     def fill(self, num_atoms, atom_diam):
         num_atoms_linear = int(math.ceil(pow(num_atoms,1.0/3.0)))
-        #atoms = np.zeros((num_atoms, 3), dtype=np.float64)
         atoms = np.zeros((0, 3), dtype=np.float64)
         a = 1
         for i in range(num_atoms_linear):
