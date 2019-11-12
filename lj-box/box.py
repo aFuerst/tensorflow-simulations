@@ -20,7 +20,7 @@ class Box:
             for j in range(num_atoms_linear):
                 for k in range(num_atoms_linear):
                     if atoms.shape[0] >= num_atoms:
-                        return atoms
+                        return atoms, atoms.shape[0]
                     else:
                         x = (-self._x/2 + a/2.0) + i*a
                         y = (-self._y/2 + a/2.0) + j*a
@@ -32,7 +32,7 @@ class Box:
                             atoms = np.concatenate([atoms, new], axis=0)
         if atoms.shape[0] < num_atoms:
             print("WARNING: Unable to fit in {0} atoms, could only place {1}".format(num_atoms, atoms.shape[0]))
-        return atoms
+        return atoms, atoms.shape[0]
 
     def get_edges_as_tf(self):
         return tf.constant(np.array([self._x, self._y, self._z]), name="edges")

@@ -31,7 +31,7 @@ update_forces(atoms):
         for atom_2 in atoms:
             d = (atom_1[pos] - atom_2[pos]) % box_size
             r = magnitude(d)
-            if r > (d * box_size)
+            if r > (atom[size] * box_size)
                 atom_1[force] += 0
             else
                 r6 = ((r^2)^3)
