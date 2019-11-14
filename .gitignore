@@ -3,3 +3,5 @@ checkpoints/
 chkpt/
 test/
 **/__pycache__/
+**/output-*/
+outputs/

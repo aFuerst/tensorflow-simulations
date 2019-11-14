@@ -5,6 +5,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import numpy as np
 import tensorflow as tf
 import sys
+import time
 
 m = 1
 k = 1
@@ -42,8 +43,7 @@ def update_pos(pos, vel, force, delta_t):
     t = tf.math.scalar_mul(delta_t, vel)
     return t + pos
 
-def compute_energies(pos, vel, force, energies, delta_t):
-    ke, pe, tot = energies
+def compute_energies(pos, vel, force, ke, pe, tot, delta_t):
     ke = calc_ke(vel, pos)
     pe = calc_pe(vel, pos)
     tot = ke + pe
@@ -53,32 +53,45 @@ def loop_control(step_target, step, vecs):
     return step < step_target
 
 @tf.function
-def loop_execute(vecs):
-    pos, vel, force, energies = vecs
+def loop_execute(pos, vel, force, ke, pe, tot):
     for i in range(log_freq):
         #print(type(vel))
         vel = update_vel(pos, vel, force, delta_t)
         pos = update_pos(pos, vel, force, delta_t)
         force = update_force(pos, vel, force, delta_t)
         vel = update_vel(pos, vel, force, delta_t)
-        energies = compute_energies(pos, vel, force, energies, delta_t)
-    return (pos, vel, force, energies)
+        ke, pe, tot = compute_energies(pos, vel, force, ke, pe, tot, delta_t)
+    return (pos, vel, force, ke, pe, tot)
 
 if __name__ == '__main__':
-    pos = tf.Variable(np.array([a, 0, 0], dtype=np.float64), name="position")
-    vel = tf.Variable(np.array([0, 0, 0], dtype=np.float64), name="velocity")
-    force = tf.Variable(np.array([-k*a, 0, 0], dtype=np.float64), name="force")
-    ke = tf.Variable(0, dtype=np.float64, name="kinetic")
-    pe = tf.Variable(0.5*k*a*a, dtype=np.float64, name="potential")
-    tot = tf.Variable(0.5*k*a, dtype=np.float64, name="total")
+    pos = np.array([a, 0, 0], dtype=np.float64)
+    vel = np.array([0, 0, 0], dtype=np.float64)
+    force = np.array([-k*a, 0, 0], dtype=np.float64)
+    ke = 0.0
+    pe = 0.5*k*a*a
+    tot = 0.5*k*a
     energies = (ke, pe, tot)
-    
+
+    pos_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=pos.shape)
+    vel_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=vel.shape)
+    force_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=force.shape)
+    ke_p = tf.compat.v1.placeholder(dtype=tf.float64)
+    pe_p = tf.compat.v1.placeholder(dtype=tf.float64)
+    tot_p = tf.compat.v1.placeholder(dtype=tf.float64)
+
     with tf.compat.v1.Session() as sess:
         sess.as_default()
         sess.run(tf.compat.v1.global_variables_initializer())
         print("Delta t = {}".format(delta_t))
-        out = (pos, vel, force, energies)
+
+        # build graph
+        start = time.time()
+        pos_g, vel_g, force_g, ke_g, pe_g, tot_g = loop_execute(pos_p, vel_p, force_p, ke_p, pe_p, tot_p)
+        built = time.time()
+        print("build time:", built-start)
         for seg in range(num_iterations):
-            out = loop_execute(out)
-            out = sess.run(out)
-            print((1+seg)*log_freq, out)
+            feed_dict={pos_p:pos, vel_p:vel, force_p:force, ke_p:ke, pe_p:pe, tot_p:tot}
+            pos, vel, force, ke, pe, tot = sess.run([pos_g, vel_g, force_g, ke_g, pe_g, tot_g], feed_dict=feed_dict)
+            print((1+seg)*log_freq, pos, vel, force, ke, pe, tot)
+        simul = time.time()
+        print("sim time:", simul-built)
