@@ -5,3 +5,7 @@ test/
 **/__pycache__/
 **/output-*/
 outputs/
+*.o
+*.lammpstrj
+simulate_many_particle_dynamics
+*.out
