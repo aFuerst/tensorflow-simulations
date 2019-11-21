@@ -1,5 +1,6 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import numpy as np
@@ -46,6 +47,7 @@ forces = np.zeros(positions.shape, dtype=np.float64)
 velocities = np.zeros(positions.shape, dtype=np.float64)
 edges = box.get_edges_as_tf()
 edges_half = box.get_edges_as_tf() / 2.0
+neg_edges_half = tf.negative(edges_half)
 forces_zeroes_tf = tf.constant(np.zeros((number_ljatom, 3)), dtype=tf.float64)
 forces_mag_zeroes_tf = tf.constant(np.zeros((number_ljatom, 1)), dtype=tf.float64)
 
@@ -58,33 +60,35 @@ def calc_force(pos):
     # TODO: remove hack of passing 'pos' into single_force. just uses scoping rules to 'pass in'
     def single_force(atom_pos):
         dist = pos - atom_pos
-        dist = tf.where(tf.math.abs(dist) > edges_half, dist, dist - edges)
-        dist = tf.where(tf.math.abs(dist) < edges_half, dist, dist + edges)
-        magnitude = tf.math.sqrt(tf.math.reduce_sum(dist**2.0, axis=1, keepdims=True))
-        twelve = ljatom_diameter_tf ** 12.0 / magnitude **12.0
-        six = ljatom_diameter_tf ** 6.0 / magnitude ** 6.0
-        mag_squared = 1.0 / (magnitude**2)
+        dist = tf.compat.v1.where_v2(dist > edges_half, dist - edges, dist)
+        dist = tf.compat.v1.where_v2(dist < neg_edges_half, dist + edges, dist)
+        magnitude = tf.math.sqrt(tf.math.reduce_sum(tf.math.pow(dist,2.0), axis=1, keepdims=True))
+        twelve = tf.math.pow(ljatom_diameter_tf, 12.0) / tf.math.pow(magnitude, 12.0)
+        six = tf.math.pow(ljatom_diameter_tf, 6.0) / tf.math.pow(magnitude, 6.0)
+        mag_squared = 1.0 / tf.math.pow(magnitude,2)
         
-        slice_forces = dist * (48.0 * 1.0 * ((twelve - 0.5 * six * mag_squared)))
+        slice_forces = dist * (48.0 * 1.0 * (((twelve - 0.5 * six) * mag_squared)))
         # handle case when pos - atom_pos == 0, causing inf and nan to appear in that position 
         # can't see a way to remove that case in all above computations, easier to do it all at once at the end
-        filter = tf.math.logical_or(tf.math.is_inf(slice_forces), tf.math.is_nan(slice_forces))
-        filter = tf.math.logical_or(filter, magnitude < (ljatom_diameter_tf*2.5))
-        filtered = tf.where(filter, forces_zeroes_tf, slice_forces)
-        # slice_forces = tf.debugging.check_numerics(slice_forces, "slice_forces")
-  
+        filter = tf.math.logical_or(tf.math.is_nan(slice_forces), magnitude < (ljatom_diameter_tf*2.5))
+        filtered = tf.compat.v1.where_v2(filter, forces_zeroes_tf, slice_forces)
         return tf.math.reduce_sum(filtered, axis=0)
+    return tf.map_fn(fn=single_force, elems=pos, parallel_iterations=number_ljatom, name="calc_force_map")
 
-    return tf.map_fn(fn=single_force, elems=pos, parallel_iterations=number_ljatom)
+def update_pos(pos, vel):
+    pos_graph = pos + (vel * delta_t)
+    pos_graph = tf.compat.v1.where_v2(pos_graph > edges_half, pos_graph - edges, pos_graph)
+    return tf.compat.v1.where_v2(pos_graph < neg_edges_half, pos_graph + edges, pos_graph)
+
+def update_vel(vel, force):
+    return vel + (force * (0.5*delta_t_tf/ljatom_mass_tf))
 
 def run_one_iter(vel, pos, force):
-    vel_graph = vel + (force * (0.5*delta_t_tf/ljatom_mass_tf))
-    pos_graph = pos + (vel_graph * delta_t)
-    pos_graph = tf.where(tf.math.abs(pos_graph) > edges_half, pos_graph, pos_graph - edges)
-    pos_graph = tf.where(tf.math.abs(pos_graph) < edges_half, pos_graph, pos_graph + edges)
+    vel_graph = update_vel(vel, force)
+    pos_graph = update_pos(pos, vel_graph)
     force_graph = calc_force(pos_graph)
     # TODO: compute energies
-    vel_graph = vel_graph + (force_graph * (0.5*delta_t_tf/ljatom_mass_tf))
+    vel_graph = update_vel(vel, force)
     return vel_graph, pos_graph, force_graph
 
 @tf.function
@@ -104,14 +108,13 @@ with tf.compat.v1.Session() as sess:
     sess.as_default()
     sess.run(tf.compat.v1.global_variables_initializer())
     beg = time.time()
+    if not os.path.exists("./outputs"):
+        os.mkdir("./outputs")
     os.mkdir("./outputs/output-{}".format(beg))
     
     feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities}
     f_g = calc_force(position_p) # initialize forces
     forces = sess.run(f_g, feed_dict=feed_dict)
-    if np.any(np.isnan(forces)): # TODO: remove when everything else works
-        raise AssertionError("Got nan in initial forces:\n {}".format(forces))
-
     v_g, p_g, f_g = build_graph(velocities_p, position_p, forces_p)
     built = time.time()
     print("Graph build time:", built - beg)
