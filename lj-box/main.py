@@ -23,23 +23,20 @@ temperature = 1.0
 dcut = 1 # cutoff distance for potential in reduced units
 
 def calc_force(pos, edges_half, neg_edges_half, edges, forces_zeroes_tf):
-    # TODO: remove hack of passing 'pos' into single_force. just uses scoping rules to 'pass in'
-    def single_force(atom_pos):
-        dist = pos - atom_pos
-        dist = tf.compat.v1.where_v2(dist > edges_half, dist - edges, dist)
-        dist = tf.compat.v1.where_v2(dist < neg_edges_half, dist + edges, dist)
-        magnitude = tf.math.sqrt(tf.math.reduce_sum(tf.math.pow(dist,2.0), axis=1, keepdims=True))
-        twelve = tf.math.pow(ljatom_diameter_tf, 12.0) / tf.math.pow(magnitude, 12.0)
-        six = tf.math.pow(ljatom_diameter_tf, 6.0) / tf.math.pow(magnitude, 6.0)
-        mag_squared = 1.0 / tf.math.pow(magnitude,2)
-        
-        slice_forces = dist * (48.0 * 1.0 * (((twelve - 0.5 * six) * mag_squared)))
-        # handle case when pos - atom_pos == 0, causing inf and nan to appear in that position 
-        # can't see a way to remove that case in all above computations, easier to do it all at once at the end
-        filter = tf.math.logical_or(tf.math.is_nan(slice_forces), magnitude < (ljatom_diameter_tf*2.5))
-        filtered = tf.compat.v1.where_v2(filter, forces_zeroes_tf, slice_forces)
-        return tf.math.reduce_sum(filtered, axis=0)
-    return tf.compat.v1.vectorized_map(fn=single_force, elems=pos)
+    distances = tf.compat.v1.vectorized_map(fn=lambda atom_pos: pos - atom_pos, elems=pos)
+    distances = tf.compat.v1.where_v2(distances > edges_half, distances - edges, distances)
+    distances = tf.compat.v1.where_v2(distances < neg_edges_half, distances + edges, distances)
+    magnitude = tf.math.sqrt(tf.math.reduce_sum(tf.math.pow(distances,2.0), axis=1, keepdims=True))
+    twelve = tf.math.pow(ljatom_diameter_tf, 12.0) / tf.math.pow(magnitude, 12.0)
+    six = tf.math.pow(ljatom_diameter_tf, 6.0) / tf.math.pow(magnitude, 6.0)
+    mag_squared = 1.0 / tf.math.pow(magnitude,2)
+    slice_forces = distances * (48.0 * 1.0 * (((twelve - 0.5 * six) * mag_squared)))
+    # handle case distances pos - atom_pos == 0, causing inf and nan to appear in that position 
+    # can't see a way to remove that case in all above computations, easier to do it all at once at the end
+    filter = tf.math.logical_or(tf.math.is_nan(slice_forces), magnitude < (ljatom_diameter_tf*2.5))
+    filtered = tf.compat.v1.where_v2(filter, forces_zeroes_tf, slice_forces)
+    forcs =  tf.math.reduce_sum(filtered, axis=0)
+    return forcs
 
 def update_pos(pos, vel, edges_half, neg_edges_half, edges, delta_t):
     pos_graph = pos + (vel * delta_t)
@@ -70,7 +67,7 @@ def save(timestamp, id, velocities, positions, forces):
     np.savetxt("./outputs/output-{0}/{1}-velocities".format(timestamp, id), velocities)
     np.savetxt("./outputs/output-{0}/{1}-positions".format(timestamp, id), positions)
 
-def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, ljatom_density = 0.8442, sess=None):
+def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, ljatom_density = 0.8442, sess=None, profile=False):
     log_freq_tf = tf.constant(log_freq)
     num_iterations = steps // log_freq
     delta_t = totaltime / steps
@@ -98,26 +95,34 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
     os.mkdir("./outputs/output-{}".format(beg))
     
     v_g, p_g, f_g = build_graph(velocities_p, position_p, forces_p, edges_half, neg_edges_half, edges, delta_t, log_freq, forces_zeroes_tf)
-    built = time.time()
-    # print("Graph build time:", built - beg)
     
+    if profile:
+        run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
+        run_metadata = tf.compat.v1.RunMetadata()
+    else:
+        run_options = None
+        run_metadata = None
     writer = tf.compat.v1.summary.FileWriter("./outputs/output-{}".format(beg))
     writer.add_graph(sess.graph)
-    writer.close()
-    disk = time.time()
+    comp_start = time.time()
     save(beg, 0, velocities, positions, forces)
-    # print("Graph saved time:", disk - built)
     timings = []
     for x in range(num_iterations):
         a = time.time()
         feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities}
-        velocities, positions, forces = sess.run([v_g, p_g, f_g], feed_dict=feed_dict)
+        velocities, positions, forces = sess.run([v_g, p_g, f_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
+        if profile:
+            from tensorflow.python.client import timeline
+            tl = timeline.Timeline(run_metadata.step_stats)
+            ctf = tl.generate_chrome_trace_format()
+            with open("./outputs/output-{}/{}-timeline.json".format(beg, (1+x)*log_freq), 'w') as f:
+                f.write(ctf)
         save(beg, (1+x)*log_freq, velocities, positions, forces)
         timings.append((x, time.time()-a))
         # print("Iteration done: ", time.time()-a)
-    comp = time.time() - disk
+    comp = time.time() - comp_start
     print("Computation time:", comp)
     return timings, comp
 
 if __name__ == "__main__":
-    run_simulation()
+    run_simulation(profile=True)
