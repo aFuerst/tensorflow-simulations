@@ -5,7 +5,11 @@ test/
 **/__pycache__/
 **/output-*/
 outputs/
+omp-out/
+lin-cpp-out/
 *.o
 *.lammpstrj
 simulate_many_particle_dynamics
 *.out
+*.png
+testing_omp

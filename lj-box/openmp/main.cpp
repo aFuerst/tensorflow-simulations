@@ -18,7 +18,6 @@ double update_energies(vector<PARTICLE>&, SIMULATIONBOX&, double);
 int main(int argc, char* argv[]) 
 {
   // we begin with some fundamental numbers/physical constants
-  const double pi = 3.141593;	// Pi
   const double kB = 1.38e-23;	// Joules per Kelvin
   const double mol = 6.0e23;	// Avogadro number
   
@@ -27,7 +26,6 @@ int main(int argc, char* argv[])
   double unitenergy = 119.8 * kB;// Joules; unit of energy is these many Joules (typical interaction strength)
   double unitmass = 0.03994 / mol; // kg; unit of mass (mass of a typical atom)
   double unittime = sqrt(unitmass * unitlength * unitlength / unitenergy); // Unit of time
-  double unittemperature = unitenergy/kB;			// unit of temperature
 
   // essential parameters needed for particles in a box simulation
   /**********************/
@@ -36,7 +34,6 @@ int main(int argc, char* argv[])
   double ljatom_diameter;	
   double ljatom_mass;
   double bx, by, bz;		// box edge lengths
-  double temperature;
   double dcut;			// cutoff distance for potential in reduced units
   /**********************/
   
@@ -48,10 +45,8 @@ int main(int argc, char* argv[])
   cout << "unit of time is " << unittime << " seconds" << endl;
   cout << "enter density (in LJ reduced units: recall unit of length is diameter of your lj particle); tested for rho = 0.8442  " << endl;
   cin >> ljatom_density;
-  // ljatom_density = 0.8442;
   cout << "enter total number of ljatoms (108 is a typical value; tested for this value) " << endl;
   cin >> number_ljatom;
-  // number_ljatom = 108;
   dcut = 2.5;
   
   ljatom_diameter = 1.0;	// in reduced units
@@ -59,7 +54,16 @@ int main(int argc, char* argv[])
   
   double edge_length = pow(number_ljatom/ljatom_density,1.0/3.0);
   cout << "edge length calculated to be " << edge_length << endl;
-  
+
+#pragma omp parallel default(shared)
+  {
+    if (omp_get_thread_num() == 0) {
+     printf("The app can come with OpenMP parallelization; you will learn how to make that happen)\n");
+     printf("Number of OpenMP threads %d\n", omp_get_num_threads());
+     printf("Make sure that number of particles is greater than %d\n", omp_get_num_threads());
+   }
+  }
+
   // Different parts of the system
   vector<PARTICLE> ljatom;		// all particles in the system
   
@@ -81,9 +85,9 @@ int main(int argc, char* argv[])
   update_forces(ljatom, simulation_box, dcut);	// expensive step
   
   double delta_t, totaltime;
-  totaltime = 10;
+  totaltime = 20;
   int steps;		// number of time discretizations (slices)
-  steps = 10000;
+  steps = 20000;
   
   delta_t = totaltime/steps;	// the code deterimes the time-step delta_t. choose steps carefully, make sure you have a fine discretization
   cout << "timestep (reduced units) " << delta_t << endl;
@@ -94,7 +98,7 @@ int main(int argc, char* argv[])
   
   // filing the data with naming within the code. -- sometimes could be handy -- uncomment next three lines and comment the 4th if you want that.
   char filename[200];
-  sprintf(filename, "1400.out", ljatom_density, number_ljatom);
+  sprintf(filename, "energy_rho%f_N%d.out", ljatom_density, number_ljatom);
   ofstream output_energy(filename, ios::out);
   //ofstream output_energy("energy.out", ios::out);
   
@@ -109,11 +113,11 @@ int main(int argc, char* argv[])
   output_energy << 0 << "  " << totalke/ljatom.size() << "  " << totalpe/ljatom.size() << "  " << (totalke+totalpe)/ljatom.size() << endl;
   cout << "initial total energy per lj particle is " << (totalke+totalpe)/ljatom.size() << endl;
   
-  int movie_frequency = 10;
+  int movie_frequency = 100;
   
   double average_pe = 0.0;
   double average_ke = 0.0;
-  int data_collect_frequency = 100;
+  int data_collect_frequency = 1000;
   int samples = 0;
   
   int hit_eqm = 3000; // this is your choice of where you think the system hit equilibrium
@@ -129,7 +133,9 @@ int main(int argc, char* argv[])
       ljatom[i].update_position(delta_t);// update position full timestep
       
     update_forces(ljatom, simulation_box, dcut);	// expensive step
-    double totalpe = update_energies(ljatom, simulation_box, dcut);  
+    double totalpe;
+    //if (num%data_collect_frequency == 0)
+    totalpe = update_energies(ljatom, simulation_box, dcut);
     
     for (unsigned int i = 0; i < ljatom.size(); i++)
       ljatom[i].update_velocity(delta_t);// update velocity half timestep
@@ -144,9 +150,10 @@ int main(int argc, char* argv[])
     // calling a movie function to get a movie of the simulation
     if (num%movie_frequency == 0)
       make_movie(num,ljatom,simulation_box.lx,simulation_box.ly,simulation_box.lz,list_propagation);
-    
-    // outputting the energy to make sure simulation can be trusted
-    output_energy << num << "  " << totalke/ljatom.size() << "  " << totalpe/ljatom.size() << "  " << (totalke+totalpe)/ljatom.size() << endl;
+
+      // outputting the energy to make sure simulation can be trusted
+    if (num%data_collect_frequency == 0)
+        output_energy << num << "  " << totalke/ljatom.size() << "  " << totalpe/ljatom.size() << "  " << (totalke+totalpe)/ljatom.size() << endl;
     
     if (num > hit_eqm && num%data_collect_frequency == 0)
     {

@@ -1,0 +1,25 @@
+things you may need:
+- openmp library. usually comes if you do: module load openmpi
+- to compile type make
+- to use openmp parallelization: export OMP_NUM_THREADS=N where N = 1,2,..8 or higher depending on your system
+- make run would run the program for density=0.8 and particle number N = 216
+- for 1 thread (no parallelization), the program finishes in my system in 29 seconds.
+- my system details:
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                8
+On-line CPU(s) list:   0-7
+Thread(s) per core:    2
+Core(s) per socket:    4
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 94
+Model name:            Intel(R) Core(TM) i7-6700 CPU @ 3.40GHz
+Stepping:              3
+CPU MHz:               802.478
+CPU max MHz:           4000.0000
+CPU min MHz:           800.0000
+
