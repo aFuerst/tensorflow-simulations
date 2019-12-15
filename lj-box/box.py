@@ -4,7 +4,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import tensorflow as tf
 import numpy as np
-import math
+import math, sys
 
 class Box:
     def __init__(self, x_len: float=10.0, y_len: float=10.0, z_len: float=10.0):
@@ -31,7 +31,7 @@ class Box:
                             new = np.asarray([[x,y,z]], dtype=np.float64)
                             atoms = np.concatenate([atoms, new], axis=0)
         if atoms.shape[0] < num_atoms:
-            print("WARNING: Unable to fit in {0} atoms, could only place {1}".format(num_atoms, atoms.shape[0]))
+            print("WARNING: Unable to fit in {0} atoms, could only place {1}".format(num_atoms, atoms.shape[0]), file=sys.stderr)
         return atoms, atoms.shape[0]
 
     def get_edges_as_tf(self):

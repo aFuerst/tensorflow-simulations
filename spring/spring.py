@@ -12,7 +12,7 @@ k = 1
 a = -1
 totaltime = 10
 steps = 10000
-log_freq = 1000
+log_freq = 5
 num_iterations = steps // log_freq
 delta_t = totaltime / steps
 prints = []
@@ -54,8 +54,7 @@ def loop_control(step_target, step, vecs):
 
 @tf.function
 def loop_execute(pos, vel, force, ke, pe, tot):
-    for i in range(log_freq):
-        #print(type(vel))
+    for i in tf.range(log_freq):
         vel = update_vel(pos, vel, force, delta_t)
         pos = update_pos(pos, vel, force, delta_t)
         force = update_force(pos, vel, force, delta_t)
@@ -63,13 +62,28 @@ def loop_execute(pos, vel, force, ke, pe, tot):
         ke, pe, tot = compute_energies(pos, vel, force, ke, pe, tot, delta_t)
     return (pos, vel, force, ke, pe, tot)
 
+file_path = "particle.trajectory.out"
+f = None
+
+def save(step, position, velocity, force, ke, pe, tot):
+    global f
+    if f is None:
+        f = open(file_path, "a")
+        f.write("#, position, velocity, force, ke, pe, tot\n")
+    f.write("{}, {}, {}, {}, {}, {}, {}\n".format(step, position[0], velocity[0], force[0], ke, pe, tot))
+
+def clean_file():
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
 if __name__ == '__main__':
+    clean_file()
     pos = np.array([a, 0, 0], dtype=np.float64)
     vel = np.array([0, 0, 0], dtype=np.float64)
     force = np.array([-k*a, 0, 0], dtype=np.float64)
     ke = 0.0
     pe = 0.5*k*a*a
-    tot = 0.5*k*a
+    tot = ke + pe
     energies = (ke, pe, tot)
 
     pos_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=pos.shape)
@@ -87,11 +101,14 @@ if __name__ == '__main__':
         # build graph
         start = time.time()
         pos_g, vel_g, force_g, ke_g, pe_g, tot_g = loop_execute(pos_p, vel_p, force_p, ke_p, pe_p, tot_p)
+        writer = tf.compat.v1.summary.FileWriter("./graph")
+        writer.add_graph(sess.graph)
         built = time.time()
         print("build time:", built-start)
+        save(0, pos, vel, force, ke, pe, tot)
         for seg in range(num_iterations):
             feed_dict={pos_p:pos, vel_p:vel, force_p:force, ke_p:ke, pe_p:pe, tot_p:tot}
             pos, vel, force, ke, pe, tot = sess.run([pos_g, vel_g, force_g, ke_g, pe_g, tot_g], feed_dict=feed_dict)
-            print((1+seg)*log_freq, pos, vel, force, ke, pe, tot)
+            save((1+seg)*log_freq, pos, vel, force, ke, pe, tot)
         simul = time.time()
         print("sim time:", simul-built)

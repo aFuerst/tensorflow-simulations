@@ -36,6 +36,9 @@ int main(int argc, char* argv[])
   double bx, by, bz;		// box edge lengths
   double dcut;			// cutoff distance for potential in reduced units
   /**********************/
+
+  int steps;		// number of time discretizations (slices)
+  steps = 20000;
   
   cout << "\nProgram starts\n";
   cout << "units of length, energy, mass are given near the top of the main function" << endl;
@@ -47,6 +50,8 @@ int main(int argc, char* argv[])
   cin >> ljatom_density;
   cout << "enter total number of ljatoms (108 is a typical value; tested for this value) " << endl;
   cin >> number_ljatom;
+  cout << "enter total number of steps " << endl;
+  cin >> steps;
   dcut = 2.5;
   
   ljatom_diameter = 1.0;	// in reduced units
@@ -86,8 +91,6 @@ int main(int argc, char* argv[])
   
   double delta_t, totaltime;
   totaltime = 20;
-  int steps;		// number of time discretizations (slices)
-  steps = 20000;
   
   delta_t = totaltime/steps;	// the code deterimes the time-step delta_t. choose steps carefully, make sure you have a fine discretization
   cout << "timestep (reduced units) " << delta_t << endl;
