@@ -9,7 +9,7 @@ Parameters:
 """
 def kinetic_energy(vel, ljatom_diameter_tf):
     with tf.name_scope("kinetic_energy"):
-        half = tf.const(0.5, dtype=tf.float64)
+        half = tf.constant(0.5, dtype=tf.float64)
         magnitude = common.magnitude(vel)
         return tf.reduce_sum(half * ljatom_diameter_tf * magnitude * magnitude)
 
@@ -26,15 +26,18 @@ def potential_energy(pos, edges_half, neg_edges_half, edges, ljatom_diameter_tf)
     with tf.name_scope("potential_energy"):
         dcut = tf.constant(2.5, dtype=pos.dtype, name="dcut")
         elj = tf.constant(1.0, dtype=pos.dtype, name="elj")
+        four = tf.constant(4.0, dtype=tf.float64)
+        two = tf.constant(2.0, dtype=tf.float64)
+        one = tf.constant(1.0, dtype=tf.float64)
         dcut_6 = tf.pow(dcut, 6, name="dcut_6")
         dcut_12 = tf.pow(dcut, 12, name="dcut_12")
-        energy_shift = 4.0*elj*(1.0/dcut_12 - 1.0/dcut_6)
+        energy_shift = four*elj*(one/dcut_12 - one/dcut_6)
         distances = tf.compat.v1.vectorized_map(fn=lambda atom_pos: pos - atom_pos, elems=pos)
         distances = tf.compat.v1.where_v2(distances > edges_half, distances - edges, distances, name="edges__half_where")
         distances = tf.compat.v1.where_v2(distances < neg_edges_half, distances + edges, distances, name="neg_edges__half_where")
         magnitude = common.magnitude(distances)
         d_6 = tf.pow(ljatom_diameter_tf, 6, name="energy_d_6")
         r_6 = tf.pow(magnitude, 6, name="energy_r_6")
-        ljpair = 4.0 * elj * (d_6 / r_6) * ( ( d_6 / r_6 ) - 1.0 ) - energy_shift
-        ret = tf.reduce_sum(ljpair, name="energy_reduce_sum") / 2.0
+        ljpair = four * elj * (d_6 / r_6) * ( ( d_6 / r_6 ) - one ) - energy_shift
+        ret = tf.reduce_sum(ljpair, name="energy_reduce_sum") / two
         return ret

@@ -55,20 +55,22 @@ def toggle_xla(xla):
     if xla:
         tf.config.optimizer.set_jit(xla)
 
-def toggle_cpu(cpu):
+def toggle_cpu(cpu, thread_count):
     if cpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-        return tf.compat.v1.ConfigProto(intra_op_parallelism_threads=os.cpu_count(), inter_op_parallelism_threads=2)
+        tf.config.threading.set_inter_op_parallelism_threads(thread_count)
+        tf.config.threading.set_intra_op_parallelism_threads(thread_count)
+        return tf.compat.v1.ConfigProto(intra_op_parallelism_threads=thread_count, inter_op_parallelism_threads=thread_count)
     return None
 
 def manual_optimizer(optimizer):
     if optimizer:
-        tf.config.optimizer.set_experimental_options({'constant_folding': True, "layout_optimizer": True, "shape_optimization":True, "remapping":True, "arithmetic_optimization":True, "dependency_optimization":True, "loop_optimization":True, "function_optimization":True, "debug_stripper":True, "scoped_allocator_optimization":True, "implementation_selector":True, "auto_mixed_precision":True})
+        tf.config.optimizer.set_experimental_options({'constant_folding': True, "layout_optimizer": True, "shape_optimization":True, "remapping":True, "arithmetic_optimization":True, "dependency_optimization":True, "loop_optimization":True, "function_optimization":True, "debug_stripper":True, "scoped_allocator_optimization":True, "implementation_selector":True, "auto_mixed_precision":True, "pin_to_host_optimization":True})
 
-def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, ljatom_density=0.8442, sess=None, profile=False, xla=True, force_cpu=False, optimizer=False):
+def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, ljatom_density=0.8442, sess=None, profile=False, xla=True, force_cpu=False, optimizer=False, thread_count=os.cpu_count()):
     toggle_xla(xla)
     manual_optimizer(optimizer)
-    config = toggle_cpu(force_cpu)
+    config = toggle_cpu(force_cpu, thread_count)
     num_iterations = steps // log_freq
     delta_t = totaltime / steps
     bx = by = bz = pow(number_ljatom/ljatom_density,1.0/3.0) # box edge lengths
@@ -119,6 +121,7 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
             from tensorflow.python.client import timeline
             tl = timeline.Timeline(run_metadata.step_stats)
             ctf = tl.generate_chrome_trace_format()
+            writer.add_run_metadata(run_metadata, 'step%d' % x)
             with open(os.path.join(subfolder, "{}-timeline.json".format((1+x)*log_freq)), 'w') as f:
                 f.write(ctf)
         save(subfolder, (1+x)*log_freq, velocities, positions, forces)
@@ -134,6 +137,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', "--steps", action="store", default=10000)
     parser.add_argument('-t', "--time", action="store", default=10)
     parser.add_argument('-l', "--log", action="store", default=1000)
+    parser.add_argument("--threads", action="store", default=os.cpu_count())
     args = parser.parse_args()
-    comp = run_simulation(profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=int(args.parts), steps=int(args.steps), log_freq=int(args.log), totaltime=int(args.time), optimizer=args.opt)
+    comp = run_simulation(profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=int(args.parts), steps=int(args.steps), log_freq=int(args.log), totaltime=int(args.time), optimizer=args.opt, thread_count=int(args.threads))
     print(comp)

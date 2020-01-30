@@ -16,3 +16,6 @@ testing_omp
 .pckl
 spring/cpp/data/
 figs/
+cpu_stats*/
+log.txt
+names.txt
