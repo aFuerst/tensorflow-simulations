@@ -15,3 +15,4 @@ simulate_many_particle_dynamics
 testing_omp
 .pckl
 spring/cpp/data/
+figs/

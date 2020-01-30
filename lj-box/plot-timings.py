@@ -41,7 +41,7 @@ ax.legend()
 ax.set_xlabel("Num Atoms")
 ax.set_ylabel("Time (s)")
 # ax.set_title("Simulation duration")
-save_plot("./atoms.png")
+save_plot("./figs/atoms.png")
 
 ######### end ploting num atoms #########
 
@@ -69,7 +69,7 @@ ax.legend()
 ax.set_xlabel("Num Steps")
 ax.set_ylabel("Time (s)")
 # ax.set_title("Simulation duration")
-save_plot("./steps.png")
+save_plot("./figs/steps.png")
 
 ######### end ploting num steps #########
 
@@ -112,11 +112,11 @@ df = pd.DataFrame.from_records(pts, columns=["atoms", "time"])
 ax.legend()
 ax.set_xlabel("Num Atoms")
 ax.set_ylabel("Time (s)")
-save_plot("./openmp-tf-tims.png")
+save_plot("./figs/openmp-tf-tims.png")
 
 ax.plot(df["atoms"], df["time"], label="CPP")
 
 ax.legend()
 ax.set_xlabel("Num Atoms")
 ax.set_ylabel("Time (s)")
-save_plot("./cpp-tf-tims.png")
+save_plot("./figs/cpp-tf-tims.png")
