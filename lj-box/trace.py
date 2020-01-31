@@ -1,25 +1,18 @@
 import json, os, sys
 
-trace = "/home/alfuerst/tensorflow-simulations/lj-box/outputs/output-10-10000-1000-108/2000-timeline.json"
-
+trace = "/home/alfuerst/tensorflow-simulations/lj-box/outputs/output-10-10000-1000-109/2000-timeline.json"
 
 data=None
 with open(trace) as f:
     data = json.load(f)
 
 data = data["traceEvents"]
-# print(len(data))
 
 names = set()
 for item in data:
     if "name" in item:
         names.add(item["name"])
 
-# print(len(names))
-# for name in names:
-#     print(name)
-# #print(names)
-# exit()
 compute_ops = ["xla", "add", "less", "const", "reduction_indices", "logicalor", "sqrt", "pow", "square", "isnan", "reshape", "greater", "realdiv", "mul", "sum", "select", "sub"]
 
 start = sys.maxsize
@@ -40,7 +33,7 @@ for item in data:
     if "dur" in item:
         wall += item["dur"]
 
-print("Productive time %: ", wall/tot)
+print("Active time %: ", wall/tot)
 
 compute_wall = 0
 for item in data:
@@ -48,7 +41,7 @@ for item in data:
         if op in item["name"].lower():
             if "dur" in item:
                 compute_wall  += item["dur"]
-print("Compute Productive time %: ", compute_wall/tot)
+print("Productive time %: ", compute_wall/tot)
 
 control_wall = 0
 for item in data:
@@ -62,15 +55,18 @@ for item in data:
             control_wall  += item["dur"]
 print("Control Flow time %: ", control_wall/tot)
 
-# print((compute_wall+control_wall)/tot)
+def calc_lost_time(data):
+    op_times = []
+    for item in data:
+        if "dur" in item:
+            op_times.append((item["ts"], item["dur"]))
+    op_times = sorted(op_times, key=lambda x: x[0], reverse=False)
+    lost_time = 0
+    while len(op_times) > 1:
+        start, duration = op_times.pop(0)
+        if op_times[0][0] <= start + duration + 1:
+            continue
+        else:
+            lost_time += op_times[0][0] - (start + duration)
 
-# with_dur = 0
-# op_count = 0
-# for item in data:
-#     if "cat" in item and item["cat"] != "DataFlow":
-#         op_count += 1
-# for item in data:
-#     if "dur" in item:
-#         with_dur += 1
-
-# print(with_dur/op_count)
+print("Lost time %: ", calc_lost_time(data)/tot)

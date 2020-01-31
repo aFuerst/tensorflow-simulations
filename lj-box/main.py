@@ -65,7 +65,11 @@ def toggle_cpu(cpu, thread_count):
 
 def manual_optimizer(optimizer):
     if optimizer:
-        tf.config.optimizer.set_experimental_options({'constant_folding': True, "layout_optimizer": True, "shape_optimization":True, "remapping":True, "arithmetic_optimization":True, "dependency_optimization":True, "loop_optimization":True, "function_optimization":True, "debug_stripper":True, "scoped_allocator_optimization":True, "implementation_selector":True, "auto_mixed_precision":True, "pin_to_host_optimization":True})
+        # , "pin_to_host_optimization":True
+        tf.config.optimizer.set_experimental_options({'constant_folding': True, "layout_optimizer": True, "shape_optimization":True, 
+                        "remapping":True, "arithmetic_optimization":True, "dependency_optimization":True, "loop_optimization":True, 
+                        "function_optimization":True, "debug_stripper":True, "scoped_allocator_optimization":True, 
+                        "implementation_selector":True, "auto_mixed_precision":True, "debug_stripper": True})
 
 def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, ljatom_density=0.8442, sess=None, profile=False, xla=True, force_cpu=False, optimizer=False, thread_count=os.cpu_count()):
     toggle_xla(xla)
