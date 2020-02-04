@@ -20,8 +20,8 @@ dcut = 1 # cutoff distance for potential in reduced units
 def update_pos(pos, vel, edges_half, neg_edges_half, edges, delta_t):
     with tf.name_scope("update_pos"):
         pos_graph = pos + (vel * delta_t)
-        pos_graph = tf.compat.v1.where_v2(pos_graph > edges_half, pos_graph - edges, pos_graph)
-        return tf.compat.v1.where_v2(pos_graph < neg_edges_half, pos_graph + edges, pos_graph)
+        pos_graph = tf.compat.v1.where_v2(pos_graph > edges_half, pos_graph - edges, pos_graph, name="where_edges_half")
+        return tf.compat.v1.where_v2(pos_graph < neg_edges_half, pos_graph + edges, pos_graph, name="where_neg_edges_half")
 
 def update_vel(vel, force, delta_t, ljatom_mass_tf):
     with tf.name_scope("update_vel"):

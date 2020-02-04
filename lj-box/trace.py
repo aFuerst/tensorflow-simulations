@@ -1,6 +1,6 @@
 import json, os, sys
 
-trace = "/home/alfuerst/tensorflow-simulations/lj-box/outputs/output-10-10000-1000-109/2000-timeline.json"
+trace = "/home/alfuerst/tensorflow-simulations/lj-box/outputs/output-10-10000-1000-108/2000-timeline.json"
 
 data=None
 with open(trace) as f:
@@ -11,9 +11,14 @@ data = data["traceEvents"]
 names = set()
 for item in data:
     if "name" in item:
-        names.add(item["name"])
-
-compute_ops = ["xla", "add", "less", "const", "reduction_indices", "logicalor", "sqrt", "pow", "square", "isnan", "reshape", "greater", "realdiv", "mul", "sum", "select", "sub"]
+        sects = item["name"].split("/")
+        for sect in sects:
+            names.add(sect)
+# print(sorted(names))
+# exit()
+compute_ops = ["xla", "add", "less", "const", "reduction_indices", "logicalor", "sqrt", "pow", 
+            "square", "isnan", "reshape", "greater", "realdiv", "mul", "sum", "select", "sub",
+            "or", "where"]
 
 start = sys.maxsize
 end = 0
@@ -33,7 +38,7 @@ for item in data:
     if "dur" in item:
         wall += item["dur"]
 
-print("Active time %: ", wall/tot)
+print("Active time %: ", (wall/tot)*100)
 
 compute_wall = 0
 for item in data:
@@ -41,7 +46,15 @@ for item in data:
         if op in item["name"].lower():
             if "dur" in item:
                 compute_wall  += item["dur"]
-print("Productive time %: ", compute_wall/tot)
+print("Productive time %: ", (compute_wall/tot)*100)
+
+where_wall = 0
+for item in data:
+        if "where" in item["name"].lower()or "select" in item["name"].lower():
+            # print(item)
+            if "dur" in item:
+                where_wall  += item["dur"]
+print("Where time %: ", (where_wall/tot)*100)
 
 control_wall = 0
 for item in data:
@@ -53,7 +66,7 @@ for item in data:
     if not_in:
         if "dur" in item:
             control_wall  += item["dur"]
-print("Control Flow time %: ", control_wall/tot)
+print("Control Flow time %: ", (control_wall/tot)*100)
 
 def calc_lost_time(data):
     op_times = []
@@ -68,5 +81,6 @@ def calc_lost_time(data):
             continue
         else:
             lost_time += op_times[0][0] - (start + duration)
+    return lost_time
 
-print("Lost time %: ", calc_lost_time(data)/tot)
+print("Lost time %: ", (calc_lost_time(data)/tot)*100)
