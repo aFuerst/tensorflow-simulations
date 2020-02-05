@@ -53,7 +53,12 @@ int main(int argc, char* argv[])
   cout << "enter total number of steps " << endl;
   cin >> steps;
   dcut = 2.5;
-  
+
+  int threads;
+  cin >> threads;  
+  omp_set_dynamic(0);     // Explicitly disable dynamic teams
+  omp_set_num_threads(threads); // specify exact number of threads
+
   ljatom_diameter = 1.0;	// in reduced units
   ljatom_mass = 1.0;
   

@@ -5,6 +5,7 @@ test/
 **/__pycache__/
 **/output-*/
 outputs/
+output/
 omp-out*/
 lin-cpp-out/
 *.o
@@ -19,3 +20,6 @@ figs/
 cpu_stats*/
 log.txt
 names.txt
+slm_output/
+omp/**
+omp/

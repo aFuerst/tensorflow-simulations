@@ -3,8 +3,8 @@
 PROG = testing_omp
 OBJ = main.o simulationbox.o functions.o forces.o energies.o
 
-CC = g++ -O3 -g -Wall -fopenmp -std=c++11
-LFLAG = -lgsl -lgslcblas -lm
+CC = CC -O3 -g -Wall -fopenmp -std=c++11
+LFLAG = -lm #-lgsl -lgslcblas
 CFLAG = -c
 OFLAG = -o
 

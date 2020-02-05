@@ -100,7 +100,7 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
     main_folder = "./outputs"
     if not os.path.exists(main_folder):
         os.mkdir(main_folder)
-    subfolder = os.path.join(main_folder, "output-{}-{}-{}-{}".format(totaltime, steps, log_freq, number_ljatom))
+    subfolder = os.path.join(main_folder, "output-{}-{}-{}-{}-{}".format(thread_count, totaltime, steps, log_freq, number_ljatom))
     if os.path.exists(subfolder):
         shutil.rmtree(subfolder)
     os.mkdir(subfolder)

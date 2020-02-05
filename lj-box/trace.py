@@ -67,6 +67,6 @@ def calc_lost_time(data):
         if op_times[0][0] <= start + duration + 1:
             continue
         else:
-            lost_time += op_times[0][0] - (start + duration)
+            lost_time += op_times[0][0] - (start + duration+1)
 
 print("Lost time %: ", calc_lost_time(data)/tot)
