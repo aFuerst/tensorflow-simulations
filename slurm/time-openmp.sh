@@ -12,7 +12,7 @@ log="./times-$num_steps.out"
 rm -rf folder
 mkdir -p  $folder
 cd $folder
-echo 0.8442 $particle_count $num_steps $thread_count | ../../../lj-box/openmp/testing_omp > "./omp-$particle_count-$thread_count" &
+echo 0.8442 $particle_count $num_steps $thread_count | ../../../openmp/testing_omp > "./omp-$particle_count-$thread_count" &
 export PID=$!
 fname="../../cpu_stats/omp/$particle_count/top_$thread_count.dat"
 rm $fname -f

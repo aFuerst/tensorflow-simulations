@@ -12,7 +12,7 @@ do
 start="$(timestamp)"
 mkdir $num_atoms
 cd $num_atoms
-echo 0.8442 $num_atoms | /home/alfuerst/tensorflow-simulations/lj-box/cpp/simulate_many_particle_dynamics > "./lin-cpp-$num_atoms"
+echo 0.8442 $num_atoms | ./cpp/simulate_many_particle_dynamics > "./lin-cpp-$num_atoms"
 end="$(timestamp)"
 echo $start > "./times-$num_atoms"
 echo $end >> "./times-$num_atoms"
