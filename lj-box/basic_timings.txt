@@ -1,0 +1,5 @@
+T     108     1000   5000
+TFCX  24.2s   192s   93m30s
+TFC   24.5s   195s   
+OMP   5s      14s    2m56s  
+JAX   39s     7m

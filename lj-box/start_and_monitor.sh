@@ -20,7 +20,7 @@
 thread_count=100
 while [ $thread_count -ge 5 ]; do
     echo $thread_count
-    python main.py -x -c --parts 5000 --threads $thread_count &
+    python ./tf/main.py -x -c --parts 5000 --threads $thread_count &
     export PID=$!
     fname="cpu_stats_5000/top_$thread_count.dat"
     rm $fname -f
@@ -29,7 +29,7 @@ while [ $thread_count -ge 5 ]; do
 done
 
 thread_count=1
-python main.py -x -c --parts 5000 --threads $thread_count &
+python ./tf/main.py -x -c --parts 5000 --threads $thread_count &
 export PID=$!
 fname="cpu_stats_5000/top_$thread_count.dat"
 rm $fname -f

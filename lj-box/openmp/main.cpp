@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
   /**********************/
 
   int steps;		// number of time discretizations (slices)
-  steps = 20000;
+  steps = 10000;
   
   cout << "\nProgram starts\n";
   cout << "units of length, energy, mass are given near the top of the main function" << endl;
@@ -54,10 +54,10 @@ int main(int argc, char* argv[])
   cin >> steps;
   dcut = 2.5;
 
-  int threads;
-  cin >> threads;  
-  omp_set_dynamic(0);     // Explicitly disable dynamic teams
-  omp_set_num_threads(threads); // specify exact number of threads
+  // int threads;
+  // cin >> threads;  
+  // omp_set_dynamic(0);     // Explicitly disable dynamic teams
+  // omp_set_num_threads(threads); // specify exact number of threads
 
   ljatom_diameter = 1.0;	// in reduced units
   ljatom_mass = 1.0;

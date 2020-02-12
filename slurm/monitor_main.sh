@@ -11,7 +11,7 @@ cd $folder
 log="$thread_count.out"
 rm -f $log
 start="$(timestamp)"
-python ../lj-box/main.py -x -c --parts $particle_count --threads $thread_count &
+python ../lj-box/tf/main.py -x -c --parts $particle_count --threads $thread_count &
 export PID=$!
 fname="../../cpu_stats/tf/$particle_count/top_$thread_count.dat"
 rm $fname -f
