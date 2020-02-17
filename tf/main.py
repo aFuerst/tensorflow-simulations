@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from box import Box
 import energies, forces, common
+import tensorflow_manip
 import time, argparse, shutil, math, sys, os
 
 pi = 3.141593
@@ -42,6 +43,14 @@ def build_graph(vel_p, pos_p, force_p, edges_half, neg_edges_half, edges, delta_
     with tf.name_scope("build_graph"):
         v_g, p_g, f_g = vel_p, pos_p, force_p
         pe_g = ke_g = tf.constant(1, dtype=df_type) # placeholders so variable exists in scope for TF
+        # log_tf = tf.constant(0, name="log_freq_counter")
+        # cond = lambda i, vs: i < log_freq
+        # body = lambda i, vs: (i-1, run_one_iter(vs[0], vs[1], vs[2], edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf))
+        # vars = (log_tf, (v_g, p_g, f_g, pe_g, ke_g))
+        # i, vs = tf.while_loop(cond, body, loop_vars=vars, name="global_while")
+        # v_g, p_g, f_g, pe_g, ke_g = vs
+        # print("graph made")
+        # return vs
         for _ in tf.range(log_freq):
             v_g, p_g, f_g, pe_g, ke_g = run_one_iter(v_g, p_g, f_g, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf)
         return v_g, p_g, f_g, pe_g, ke_g
@@ -51,30 +60,30 @@ def save(path, id, velocities, positions, forces):
     np.savetxt(os.path.join(path, "{}-velocities".format(id)), velocities)
     np.savetxt(os.path.join(path, "{}-positions".format(id)), positions)
 
-def toggle_xla(xla):
-    if xla:
-        tf.config.optimizer.set_jit(xla)
+# def toggle_xla(xla):
+#     if xla:
+#         tf.config.optimizer.set_jit(xla)
 
-def toggle_cpu(cpu, thread_count):
-    if cpu:
-        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-        tf.config.threading.set_inter_op_parallelism_threads(thread_count)
-        tf.config.threading.set_intra_op_parallelism_threads(thread_count)
-        return tf.compat.v1.ConfigProto(intra_op_parallelism_threads=thread_count, inter_op_parallelism_threads=thread_count)
-    return None
+# def toggle_cpu(cpu, thread_count):
+#     if cpu:
+#         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+#         tf.config.threading.set_inter_op_parallelism_threads(thread_count)
+#         tf.config.threading.set_intra_op_parallelism_threads(thread_count)
+#         return tf.compat.v1.ConfigProto(intra_op_parallelism_threads=thread_count, inter_op_parallelism_threads=thread_count)
+#     return None
 
-def manual_optimizer(optimizer):
-    if optimizer:
-        # , "pin_to_host_optimization":True
-        tf.config.optimizer.set_experimental_options({'constant_folding': True, "layout_optimizer": True, "shape_optimization":True, 
-                        "remapping":True, "arithmetic_optimization":True, "dependency_optimization":True, "loop_optimization":True, 
-                        "function_optimization":True, "debug_stripper":True, "scoped_allocator_optimization":True, 
-                        "implementation_selector":True, "auto_mixed_precision":True, "debug_stripper": True})
+# def manual_optimizer(optimizer):
+#     if optimizer:
+#         # , "pin_to_host_optimization":True
+#         tf.config.optimizer.set_experimental_options({'constant_folding': True, "layout_optimizer": True, "shape_optimization":True, 
+#                         "remapping":True, "arithmetic_optimization":True, "dependency_optimization":True, "loop_optimization":True, 
+#                         "function_optimization":True, "debug_stripper":True, "scoped_allocator_optimization":True, 
+#                         "implementation_selector":True, "auto_mixed_precision":True, "debug_stripper": True})
 
 def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, ljatom_density=0.8442, sess=None, profile=False, xla=True, force_cpu=False, optimizer=False, thread_count=os.cpu_count()):
-    toggle_xla(xla)
-    manual_optimizer(optimizer)
-    config = toggle_cpu(force_cpu, thread_count)
+    tensorflow_manip.toggle_xla(xla)
+    tensorflow_manip.manual_optimizer(optimizer)
+    config = tensorflow_manip.toggle_cpu(force_cpu, thread_count)
     num_iterations = steps // log_freq
     delta_t = totaltime / steps
     bx = by = bz = pow(number_ljatom/ljatom_density,1.0/3.0) # box edge lengths
@@ -137,11 +146,11 @@ if __name__ == "__main__":
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
-    parser.add_argument('-p', "--parts", action="store", default=108)
-    parser.add_argument('-s', "--steps", action="store", default=10000)
-    parser.add_argument('-t', "--time", action="store", default=10)
-    parser.add_argument('-l', "--log", action="store", default=1000)
-    parser.add_argument("--threads", action="store", default=os.cpu_count())
+    parser.add_argument('-p', "--parts", action="store", default=108, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
+    parser.add_argument('-t', "--time", action="store", default=10, type=int)
+    parser.add_argument('-l', "--log", action="store", default=1000, type=int)
+    parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     args = parser.parse_args()
-    comp = run_simulation(profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=int(args.parts), steps=int(args.steps), log_freq=int(args.log), totaltime=int(args.time), optimizer=args.opt, thread_count=int(args.threads))
+    comp = run_simulation(profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, log_freq=args.log, totaltime=args.time, optimizer=args.opt, thread_count=args.threads)
     print(comp)

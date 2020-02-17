@@ -1,5 +1,8 @@
-T     108     1000   5000
-TFCX  24.2s   192s   93m30s
-TFC   24.5s   195s   
-OMP   5s      14s    2m56s  
-JAX   39s     7m
+T           108     1000   5000
+TF+C        24.5s   195s   
+TF+C+X      24.2s   192s   93m30s
+TF+C+MKL    24.4s
+TF+C+X+MKL  24.5s
+TF+GPU      3.7s    66s
+OMP         5s      14s    2m56s  
+JAX         39s     7m

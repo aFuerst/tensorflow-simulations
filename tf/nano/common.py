@@ -12,5 +12,5 @@ def magnitude(tensor):
 Calculate the magnituge of a numpy array, should be in shape [x,y,z] or [[x,y,z]]
 """
 def magnitude_np(array):
-    return math.sqrt(tf.math.reduce_sum(np.pow(tensor,2.0), axis=1, keepdims=True))
+    return np.sqrt(np.sum(np.power(array,2.0)))
         

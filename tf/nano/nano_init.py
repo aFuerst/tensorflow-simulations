@@ -1,0 +1,88 @@
+import tensorflow as tf
+import numpy as np
+import utility
+import argparse, math, os
+import tensorflow_manip
+import control
+import interface
+
+
+def start_sim(tf_sess_config, args):
+    negative_diameter_in = args.neg_diam
+    positive_diameter_in = args.pos_diam
+    charge_density = 0.0
+    if (positive_diameter_in <= negative_diameter_in):
+        utility.unitlength = positive_diameter_in
+        smaller_ion_diameter = positive_diameter_in
+        bigger_ion_diameter = negative_diameter_in
+    else:
+        utility.unitlength = negative_diameter_in
+        smaller_ion_diameter = negative_diameter_in
+        bigger_ion_diameter = positive_diameter_in
+
+    utility.unittime = math.sqrt(utility.unitmass * utility.unitlength * pow(10.0, -7) * utility.unitlength / utility.unitenergy)
+    utility.scalefactor = utility.epsilon_water * utility.lB_water / utility.unitlength
+    bz = 3
+    salt_conc_in = 0.5
+    bx = math.sqrt(212 / 0.6022 / salt_conc_in / bz)
+    by = bx
+
+    if (charge_density < -0.01 or charge_density > 0.0): # we can choose charge density on surface between 0.0 (uncharged surfaces)  to -0.01 C/m2.
+        print("\ncharge density on the surface must be between zero to -0.01 C/m-2 aborting\n")
+        exit(1)
+    valency_counterion = 1
+    pz_in = 1
+    fraction_diameter = 0.02
+    counterion_diameter_in = positive_diameter_in
+    surface_area = bx * by * pow(10.0,-18) # in unit of squared meter
+    number_meshpoints = pow((1.0/fraction_diameter), 2.0)
+    charge_meshpoint = (charge_density * surface_area) / (utility.unitcharge * number_meshpoints) # in unit of electron charge
+    total_surface_charge = charge_meshpoint * number_meshpoints # in unit of electron charge
+    counterions =  2.0 * (int(abs(total_surface_charge)/valency_counterion)) # there are two charged surfaces, we multiply the counter ions by two
+
+    # we should make sure the total charge of both surfaces and the counter ions are zero
+    if (((valency_counterion * counterions) + (total_surface_charge * 2.0 )) != 0):
+        # we distribute the extra charge to the mesh points to make the system electroneutral then we recalculate the charge density on surface
+        charge_meshpoint = -1.0 * (valency_counterion * counterions) / (number_meshpoints * 2.0)
+        total_surface_charge = charge_meshpoint * number_meshpoints # we recalculate the total charge on teh surface
+        charge_density = (total_surface_charge * utility.unitcharge) / surface_area # in unit of Coulomb per squared meter
+    mdremote = control.Control()
+
+    if (mdremote.steps < 100000):      # minimum mdremote.steps is 20000
+        mdremote.hiteqm = int(mdremote.steps*0.1)
+        mdremote.writedensity =int(mdremote.steps*0.1)
+        mdremote.extra_compute = int(mdremote.steps*0.01)
+        mdremote.moviefreq = int(mdremote.steps*0.001)
+    else:
+        mdremote.hiteqm = int(mdremote.steps * 0.2)
+        mdremote.writedensity = int(mdremote.steps * 0.1)
+        mdremote.extra_compute = int(mdremote.steps * 0.01)
+        mdremote.moviefreq = int(mdremote.steps * 0.001)
+
+    box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in, salt_valency_out=0, bx=bx/utility.unitlength, by=by/utility.unitlength, bz=bz/utility.unitlength)
+    nz_in = -1
+    # concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter
+    saltion_in = box.put_saltions_inside(pz=pz_in, nz=nz_in, concentration=salt_conc_in, positive_diameter_in=positive_diameter_in, \
+                                            negative_diameter_in=negative_diameter_in, counterions=counterions, valency_counterion=valency_counterion, \
+                                            counterion_diameter_in=counterion_diameter_in, bigger_ion_diameter=bigger_ion_diameter)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c',"--cpu", action="store_true")
+    parser.add_argument('-x', "--xla", action="store_true")
+    parser.add_argument('-r', "--prof", action="store_true")
+    parser.add_argument('-o', "--opt", action="store_true")
+    parser.add_argument('-p', "--parts", action="store", default=108, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
+    parser.add_argument('-t', "--time", action="store", default=10, type=int)
+    parser.add_argument('-l', "--log", action="store", default=1000, type=int)
+    parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
+    parser.add_argument("--neg-diam", action="store", default=0.627, type=float)
+    parser.add_argument("--pos-diam", action="store", default=0.474, type=float)
+    args = parser.parse_args()
+    print(args)
+    tensorflow_manip.toggle_xla(args.xla)
+    tensorflow_manip.manual_optimizer(args.opt)
+    config = tensorflow_manip.toggle_cpu(args.cpu, args.threads)
+    
+    start_sim(config, args)

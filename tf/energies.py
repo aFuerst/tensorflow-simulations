@@ -9,9 +9,9 @@ Parameters:
 """
 def kinetic_energy(vel, ljatom_diameter_tf):
     with tf.name_scope("kinetic_energy"):
-        half = tf.constant(0.5, dtype=tf.float64)
+        # half = tf.constant(0.5, dtype=tf.float64)
         magnitude = common.magnitude(vel)
-        return tf.reduce_sum(half * ljatom_diameter_tf * magnitude * magnitude)
+        return tf.reduce_sum(0.5 * ljatom_diameter_tf * magnitude * magnitude)
 
 """
 Compute the kinetic energy of particles as described by their velocity and mass
@@ -25,10 +25,10 @@ Parameters:
 def potential_energy(pos, edges_half, neg_edges_half, edges, ljatom_diameter_tf):
     with tf.name_scope("potential_energy"):
         dcut = tf.constant(2.5, dtype=pos.dtype, name="dcut")
-        elj = tf.constant(1.0, dtype=pos.dtype, name="elj")
-        four = tf.constant(4.0, dtype=tf.float64)
-        two = tf.constant(2.0, dtype=tf.float64)
-        one = tf.constant(1.0, dtype=tf.float64)
+        elj = 1.0
+        four = 4.0
+        one = 1.0
+        two = 2.0
         dcut_6 = tf.pow(dcut, 6, name="dcut_6")
         dcut_12 = tf.pow(dcut, 12, name="dcut_12")
         energy_shift = four*elj*(one/dcut_12 - one/dcut_6)
