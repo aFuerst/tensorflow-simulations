@@ -57,8 +57,6 @@ class Interface:
         r0_y = 0.5 * self.ly - 0.5 * bigger_ion_diameter
         r0_z = 0.5 * self.lz - 0.5 * bigger_ion_diameter
 
-        np.random.seed(0) # be consistent
-
         # generate salt ions inside
         saltion_in_pos = []
         ion_pos = []
@@ -83,6 +81,7 @@ class Interface:
             while (i < len(ion_pos) and continuewhile == False): # ensure ions are far enough apart
                 if (common.magnitude_np(posvec - ion_pos[i]) <= (0.5*bigger_ion_diameter+0.5*ion_diameter[i])):
                     continuewhile = True
+                i+=1
             if (continuewhile == True):
                 continue
             if (len(saltion_in_pos) < counterions):
@@ -106,3 +105,39 @@ class Interface:
             saltion_in_pos.append(posvec)		# create a salt ion
             ion_pos.append(posvec)			# copy the salt ion to the stack of all ions
         return np.array(saltion_in_pos), np.array(ion_pos), np.array(ion_charges), np.array(ion_masses), np.array(ion_diameter), np.array(ion_discont)
+
+    def discretize(self, smaller_ion_diameter: float, f: float, charge_meshpoint: float):
+        self.width = f * self.lx
+        nx = int(self.lx / self.width)
+        ny = int(self.ly / self.width)
+        left_plane = {"posvec":[], "q":[], "epsilon":[], "a":[], "normalvec":[]}
+        right_plane = {"posvec":[], "q":[], "epsilon":[], "a":[], "normalvec":[]}
+        area = self.width * self.width
+                
+        # creating a discretized hard wall interface at z = - l/2
+        for j in range(ny):
+            for i in range(nx):
+                position = np.array([-0.5*self.lx+0.5*smaller_ion_diameter+i*self.width, -0.5*self.ly+0.5*smaller_ion_diameter+j*self.width, -0.5*self.lz])
+                normal = np.array([0,0,-1])
+                left_plane["posvec"].append(position)
+                left_plane["q"].append(charge_meshpoint)
+                left_plane["epsilon"].append(self.eout)
+                left_plane["a"].append(area)
+                left_plane["normalvec"].append(normal)
+
+        # creating a discretized hard wall interface at z = l/2
+        for j in range(ny):
+            for i in range(nx):
+                position = np.array([-0.5*self.lx+0.5*smaller_ion_diameter+i*self.width, -0.5*self.ly+0.5*smaller_ion_diameter+j*self.width, 0.5*self.lz])
+                normal = np.array([0,0,1])
+                right_plane["posvec"].append(position)
+                right_plane["q"].append(charge_meshpoint)
+                right_plane["epsilon"].append(self.eout)
+                right_plane["a"].append(area)
+                right_plane["normalvec"].append(normal)
+        for key in left_plane.keys():
+            left_plane[key] = np.array(left_plane[key])
+        for key in right_plane.keys():
+            right_plane[key] = np.array(right_plane[key])
+        self.left_plane = left_plane
+        self.right_plane = right_plane

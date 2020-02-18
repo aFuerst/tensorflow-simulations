@@ -1,11 +1,13 @@
 import tensorflow as tf
 import numpy as np
-import utility
 import argparse, math, os
-import tensorflow_manip
-import control
-import interface
 
+import utility, control, interface, bin, thermostat, md
+import tensorflow_manip as tfmanip
+
+np.random.seed(0) # be consistent
+# import sys
+# np.set_printoptions(threshold=sys.maxsize)
 
 def start_sim(tf_sess_config, args):
     negative_diameter_in = args.neg_diam
@@ -62,9 +64,23 @@ def start_sim(tf_sess_config, args):
     box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in, salt_valency_out=0, bx=bx/utility.unitlength, by=by/utility.unitlength, bz=bz/utility.unitlength)
     nz_in = -1
     # concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter
-    saltion_in = box.put_saltions_inside(pz=pz_in, nz=nz_in, concentration=salt_conc_in, positive_diameter_in=positive_diameter_in, \
+    saltion_in_pos, ion_pos, ion_charges, ion_masses, ion_diameter, ion_discont = \
+                                        box.put_saltions_inside(pz=pz_in, nz=nz_in, concentration=salt_conc_in, positive_diameter_in=positive_diameter_in, \
                                             negative_diameter_in=negative_diameter_in, counterions=counterions, valency_counterion=valency_counterion, \
                                             counterion_diameter_in=counterion_diameter_in, bigger_ion_diameter=bigger_ion_diameter)
+    box.discretize(smaller_ion_diameter / utility.unitlength, fraction_diameter, charge_meshpoint)
+    bins = bin.make_bins(box, bin_width=0.05, ion_diams=ion_diameter)
+    thremos = thermostat.make_thremostats(chain_length_real=5, ions_count=len(ion_pos))
+    md.run_md_sim(box, thermos, saltion_in_pos, ion_pos, ion_charges, ion_masses, ion_diameter, ion_discont, bins, charge_meshpoint, valency_counterion)
+
+    sess = tf.compat.v1.Session()
+    sess.as_default()
+    ion_p = tf.compat.v1.placeholder(dtype=tf.float64, shape=ion_pos.shape, name="ion_placeholder")
+    sess.run(tf.compat.v1.global_variables_initializer())
+    bin_nums_tf = bin.tf_get_ion_bin_density(box, ion_p, bins)
+    feed_dict = {ion_p:ion_pos}
+    bin_nums = sess.run(bin_nums_tf, feed_dict=feed_dict)
+    print(bin_nums)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -80,9 +96,9 @@ if __name__ == "__main__":
     parser.add_argument("--neg-diam", action="store", default=0.627, type=float)
     parser.add_argument("--pos-diam", action="store", default=0.474, type=float)
     args = parser.parse_args()
-    print(args)
-    tensorflow_manip.toggle_xla(args.xla)
-    tensorflow_manip.manual_optimizer(args.opt)
-    config = tensorflow_manip.toggle_cpu(args.cpu, args.threads)
-    
+
+    tfmanip.toggle_xla(args.xla)
+    tfmanip.manual_optimizer(args.opt)
+    config = tfmanip.toggle_cpu(args.cpu, args.threads)
+    tfmanip.silence()
     start_sim(config, args)
