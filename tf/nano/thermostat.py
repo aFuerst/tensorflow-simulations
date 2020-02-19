@@ -55,6 +55,7 @@ def update_xi(therms, IT: float, dt: float):
     # xi = xi + 0.5 * dt * (1.0 / Q) * (IT - dof * utility.kB * utility.T) # not used. valid only for a solitary thermostat.
 
 # returns full therms dictionary with updated eta tensor
+# TODO: verify this is right
 @tf.function
 def update_eta(therms, dt: float):
     with tf.name_scope("update_eta"):
@@ -65,6 +66,7 @@ def update_eta(therms, dt: float):
     # eta = eta + 0.5 * dt * xi
 
 # calculate potential energy
+# TODO: verify this is right
 @tf.function
 def potential_energy(therms):
     with tf.name_scope("therms_potential_energy"):
@@ -72,6 +74,7 @@ def potential_energy(therms):
     # pe = dof * kB * T * eta # eta is zero for dummy making pe 0
 
 # calculate kinetic energy
+# TODO: verify this is right
 @tf.function
 def kinetic_energytherms(therms):
     with tf.name_scope("therms_kinetic_energytherms"):

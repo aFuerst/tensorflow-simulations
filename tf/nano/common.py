@@ -18,25 +18,44 @@ def magnitude_np(array):
     """
     return np.sqrt(np.sum(np.power(array,2.0)))
 
-def make_tf_versions_of_dict(dictonary):
+def make_tf_place_of_nparray(np_arr, name=None):
     """
-    Return two identical dictionaries that are TF variables and TF placeholders of the given dictionaries numpy arrays
+    Return TF placeholder version of given numpy array
     """
-    tf_variables = {}
-    tf_placeholders = {}
-    for key in dictonary.keys():
-        tf_variables[key] = tf.compat.v1.Variable(initial_value=dictonary[key], name=key, shape=dictonary[key].shape, dtype=tf_dtype)
-        tf_placeholders[key] = tf.compat.v1.placeholder(dtype=tf_dtype, shape=dictonary[key].shape, name=key+"_placeholder")
+    placeholder = tf.compat.v1.placeholder(dtype=tf_dtype, shape=np_arr.shape, name=name if name is None else name+"_placeholder")
+    return placeholder
 
-    return tf_variables, tf_placeholders
 
 def make_tf_vers_of_nparray(np_arr, name=None):
     """
     Return TF variable and placeholder version of given numpy array
     """
     variable = tf.compat.v1.Variable(initial_value=np_arr, name=name, shape=np_arr.shape, dtype=tf_dtype)
-    placeholder = tf.compat.v1.placeholder(dtype=tf_dtype, shape=np_arr.shape, name=name if name is None else name+"_placeholder")
+    placeholder = make_tf_place_of_nparray(np_arr, name)
     return variable, placeholder
+
+def make_tf_placeholder_of_dict(dictonary):
+    """
+    Return two identical dictionaries that are TF variables and TF placeholders of the given dictionaries numpy arrays
+    """
+    tf_placeholders = {}
+    for key in dictonary.keys():
+        tf_placeholders[key] = make_tf_place_of_nparray(dictonary[key], key)
+        # tf.compat.v1.placeholder(dtype=tf_dtype, shape=dictonary[key].shape, name=key+"_placeholder")
+
+    return tf_placeholders
+
+
+def make_tf_versions_of_dict(dictonary):
+    """
+    Return two identical dictionaries that are TF variables and TF placeholders of the given dictionaries numpy arrays
+    """
+    tf_variables = {}
+    tf_placeholders = make_tf_placeholder_of_dict(dictonary)
+    for key in dictonary.keys():
+        tf_variables[key] = tf.compat.v1.Variable(initial_value=dictonary[key], name=key, shape=dictonary[key].shape, dtype=tf_dtype)
+
+    return tf_variables, tf_placeholders
 
 def py_array_to_np(array, dtype=np_dtype):
     """
