@@ -1,6 +1,7 @@
 import utility, common
 import math
 import numpy as np
+from common import py_array_to_np as conv
 
 class Interface:
     def __init__(self, salt_conc_in: float, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=1, initial_eout: float=1):
@@ -64,7 +65,7 @@ class Interface:
         ion_valency = []
         ion_charges = []
         ion_masses = []
-        ion_discont = []
+        ion_diconst = []
         while (len(saltion_in_pos) != total_saltions_inside):
             x = np.random.random()
             x = (1 - x) * (-r0_x) + x * (r0_x)
@@ -89,23 +90,25 @@ class Interface:
                 ion_valency.append(valency_counterion)
                 ion_charges.append(valency_counterion*1.0)
                 ion_masses.append(1.0)
-                ion_discont.append(self.ein)
+                ion_diconst.append(self.ein)
             elif (len(saltion_in_pos) >= counterions and len(saltion_in_pos) < (total_pions_inside + counterions)):
                 ion_diameter.append(positive_diameter_in)
                 ion_valency.append(pz)
                 ion_charges.append(pz*1.0)
                 ion_masses.append(1.0)
-                ion_discont.append(self.ein)
+                ion_diconst.append(self.ein)
             else:
                 ion_diameter.append(negative_diameter_in)
                 ion_valency.append(nz)
                 ion_charges.append(nz*1.0)
                 ion_masses.append(1.0)
-                ion_discont.append(self.ein)
+                ion_diconst.append(self.ein)
             saltion_in_pos.append(posvec)		# create a salt ion
             ion_pos.append(posvec)			# copy the salt ion to the stack of all ions
-        return np.array(saltion_in_pos), np.array(ion_pos), np.array(ion_charges), np.array(ion_masses), np.array(ion_diameter), np.array(ion_discont)
-
+        ret = {"saltion_pos":conv(saltion_in_pos), "ion_pos":conv(ion_pos), "ion_charges":conv(ion_charges),\
+                 "ion_masses":conv(ion_masses), "ion_diameters":conv(ion_diameter), "ion_diconst":conv(ion_diconst)}
+        return ret
+        
     def discretize(self, smaller_ion_diameter: float, f: float, charge_meshpoint: float):
         self.width = f * self.lx
         nx = int(self.lx / self.width)
@@ -117,8 +120,8 @@ class Interface:
         # creating a discretized hard wall interface at z = - l/2
         for j in range(ny):
             for i in range(nx):
-                position = np.array([-0.5*self.lx+0.5*smaller_ion_diameter+i*self.width, -0.5*self.ly+0.5*smaller_ion_diameter+j*self.width, -0.5*self.lz])
-                normal = np.array([0,0,-1])
+                position = conv([-0.5*self.lx+0.5*smaller_ion_diameter+i*self.width, -0.5*self.ly+0.5*smaller_ion_diameter+j*self.width, -0.5*self.lz])
+                normal = conv([0,0,-1])
                 left_plane["posvec"].append(position)
                 left_plane["q"].append(charge_meshpoint)
                 left_plane["epsilon"].append(self.eout)
@@ -128,16 +131,16 @@ class Interface:
         # creating a discretized hard wall interface at z = l/2
         for j in range(ny):
             for i in range(nx):
-                position = np.array([-0.5*self.lx+0.5*smaller_ion_diameter+i*self.width, -0.5*self.ly+0.5*smaller_ion_diameter+j*self.width, 0.5*self.lz])
-                normal = np.array([0,0,1])
+                position = conv([-0.5*self.lx+0.5*smaller_ion_diameter+i*self.width, -0.5*self.ly+0.5*smaller_ion_diameter+j*self.width, 0.5*self.lz])
+                normal = conv([0,0,1])
                 right_plane["posvec"].append(position)
                 right_plane["q"].append(charge_meshpoint)
                 right_plane["epsilon"].append(self.eout)
                 right_plane["a"].append(area)
                 right_plane["normalvec"].append(normal)
         for key in left_plane.keys():
-            left_plane[key] = np.array(left_plane[key])
+            left_plane[key] = conv(left_plane[key])
         for key in right_plane.keys():
-            right_plane[key] = np.array(right_plane[key])
+            right_plane[key] = conv(right_plane[key])
         self.left_plane = left_plane
         self.right_plane = right_plane

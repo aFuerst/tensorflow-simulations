@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import utility
+import utility, common
 
 def make_thremostats(chain_length_real, ions_count):
     Q = 1.0 # thremostat mass
@@ -38,7 +38,7 @@ def make_thremostats(chain_length_real, ions_count):
         # real_bath.push_back((THERMOSTAT(0, T, 3 * ion.size(), 0.0, 0, 0)));
         # final bath is dummy bath (dummy bath always has zero mass)
     for key in therms.keys():
-        therms[key] = np.array(therms[key])
+        therms[key] = common.py_array_to_np(therms[key])
     return therms
   
 # returns full therms dictionary with updated xi tensor
@@ -77,3 +77,8 @@ def kinetic_energytherms(therms):
     with tf.name_scope("therms_kinetic_energytherms"):
         return 0.5 * therms["Q"] * therms["xi"] * therms["xi"]
         # ke = 0.5 * Q * xi * xi # Q is zero for dummy making ke 0
+
+if __name__ == "__main__":
+    print(make_thremostats(1, 5))
+    print()
+    print(make_thremostats(3, 5))
