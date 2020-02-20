@@ -11,7 +11,7 @@ class Interface:
         self.em = 0.5 * (self.ein + self.eout)
         self.ed = (self.eout - self.ein) / (4 * math.pi)
 
-        # // useful length scales signifying competition between electrostatics and entropy
+        # useful length scales signifying competition between electrostatics and entropy
         self.lB_in = (utility.lB_water * utility.epsilon_water / self.ein) / utility.unitlength
         self.lB_out = (utility.lB_water * utility.epsilon_water / self.eout) / utility.unitlength
         if (salt_conc_in != 0):
