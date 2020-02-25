@@ -1,9 +1,9 @@
 class Control:
-    def __init__(self):
-        self.verbose=True
+    def __init__(self, args):
+        self.verbose=args.verbose
         self.fakemass=None		# fictitious mass used in molecular dynamics # not relevant for this code
-        self.timestep=0.01	# timestep used in molecular dynamics
-        self.steps=5000000			# number of steps in molecular dynamics
+        self.timestep=args.delta_t	# timestep used in molecular dynamics
+        self.steps=args.step			# number of steps in molecular dynamics
         self.hiteqm=100000		# wait till this step
         self.freq=100 			# frequency of sampling
         self.on=None			# y if fmd needs to turn on

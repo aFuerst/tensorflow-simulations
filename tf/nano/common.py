@@ -4,13 +4,26 @@ import numpy as np
 np_dtype = np.float64
 tf_dtype = tf.dtypes.float64
 
-def magnitude(tensor):
+def magnitude(tensor, axis=2, keepdims=False):
     """
     Calculate the magnituge of a Tensor, should be in shape [x,y,z] or [[x,y,z]]
+    The dimension specified by 'axis' must be exactly three (3)
     """
+    if(tensor.shape[axis] != 3):
+        raise Exception("Given axis value '{}' did not have a depth of 3, but was '{}'".format(axis, tensor.shape[axis]))
     with tf.name_scope("magnitude"):
-        return tf.math.sqrt(tf.math.reduce_sum(tf.math.pow(tensor,2.0), axis=1, keepdims=True))
+        return tf.math.sqrt(magnitude_squared(tensor, axis, keepdims))
         
+def magnitude_squared(tensor, axis=2, keepdims=False):
+    """
+    Calculate the magnituge of a Tensor, should be in shape [x,y,z] or [[x,y,z]]
+    The dimension specified by 'axis' must be exactly three (3)
+    """
+    if(tensor.shape[axis] != 3):
+        raise Exception("Given axis value '{}' did not have a depth of 3, but was '{}'".format(axis, tensor.shape[axis]))
+    with tf.name_scope("magnitude_squared"):
+        return tf.math.reduce_sum(tf.math.pow(tensor,2.0), axis=axis, keepdims=keepdims)
+
 
 def magnitude_np(array):
     """
@@ -22,9 +35,7 @@ def make_tf_place_of_nparray(np_arr, name=None):
     """
     Return TF placeholder version of given numpy array
     """
-    placeholder = tf.compat.v1.placeholder(dtype=tf_dtype, shape=np_arr.shape, name=name if name is None else name+"_placeholder")
-    return placeholder
-
+    return tf.compat.v1.placeholder(dtype=tf_dtype, shape=np_arr.shape, name=name if name is None else name+"_placeholder")
 
 def make_tf_vers_of_nparray(np_arr, name=None):
     """
@@ -41,8 +52,6 @@ def make_tf_placeholder_of_dict(dictonary):
     tf_placeholders = {}
     for key in dictonary.keys():
         tf_placeholders[key] = make_tf_place_of_nparray(dictonary[key], key)
-        # tf.compat.v1.placeholder(dtype=tf_dtype, shape=dictonary[key].shape, name=key+"_placeholder")
-
     return tf_placeholders
 
 
@@ -81,3 +90,21 @@ if __name__ == "__main__":
     print()
     print(py_array_to_np([1.1,2.2,3.3]))
     print(py_array_to_np([1.1,2.2,3.3], dtype=np.int8))
+
+    print("\n\n")
+    np.random.seed(0)
+    from tensorflow_manip import silence, toggle_cpu
+    silence()
+    sess = tf.compat.v1.Session()
+    sess.as_default()
+    distances = np.ones((5,5,3))
+    v,p = make_tf_vers_of_nparray(distances)
+    mag = magnitude(v)
+    mag_sq = magnitude_squared(v)
+    
+    sess.run(tf.compat.v1.global_variables_initializer())
+    print(mag)
+    print(sess.run(mag))
+
+    print(mag_sq)
+    print(sess.run(mag_sq))

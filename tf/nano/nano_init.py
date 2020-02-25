@@ -10,9 +10,9 @@ np.random.seed(0) # be consistent
 # np.set_printoptions(threshold=sys.maxsize)
 
 def start_sim(tf_sess_config, args):
-    negative_diameter_in = args.neg_diam
-    positive_diameter_in = args.pos_diam
-    charge_density = 0.0
+    negative_diameter_in = args.neg_diameter
+    positive_diameter_in = args.pos_diameter
+    charge_density = args.charge_density
     if (positive_diameter_in <= negative_diameter_in):
         utility.unitlength = positive_diameter_in
         smaller_ion_diameter = positive_diameter_in
@@ -24,16 +24,17 @@ def start_sim(tf_sess_config, args):
 
     utility.unittime = math.sqrt(utility.unitmass * utility.unitlength * pow(10.0, -7) * utility.unitlength / utility.unitenergy)
     utility.scalefactor = utility.epsilon_water * utility.lB_water / utility.unitlength
-    bz = 3
-    salt_conc_in = 0.5
+    bz = args.confinment_len
+    salt_conc_in = args.concentration
     bx = math.sqrt(212 / 0.6022 / salt_conc_in / bz)
     by = bx
 
     if (charge_density < -0.01 or charge_density > 0.0): # we can choose charge density on surface between 0.0 (uncharged surfaces)  to -0.01 C/m2.
         print("\ncharge density on the surface must be between zero to -0.01 C/m-2 aborting\n")
         exit(1)
-    valency_counterion = 1
-    pz_in = 1
+    pz_in = args.pos_valency
+    valency_counterion = pz_in
+    nz_in = args.neg_valency
     fraction_diameter = 0.02
     counterion_diameter_in = positive_diameter_in
     surface_area = bx * by * pow(10.0,-18) # in unit of squared meter
@@ -48,7 +49,7 @@ def start_sim(tf_sess_config, args):
         charge_meshpoint = -1.0 * (valency_counterion * counterions) / (number_meshpoints * 2.0)
         total_surface_charge = charge_meshpoint * number_meshpoints # we recalculate the total charge on teh surface
         charge_density = (total_surface_charge * utility.unitcharge) / surface_area # in unit of Coulomb per squared meter
-    mdremote = control.Control()
+    mdremote = control.Control(args)
 
     if (mdremote.steps < 100000):      # minimum mdremote.steps is 20000
         mdremote.hiteqm = int(mdremote.steps*0.1)
@@ -75,16 +76,22 @@ def start_sim(tf_sess_config, args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-c',"--cpu", action="store_true")
+    parser.add_argument('-v',"--verbose", action="store_true")
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
-    parser.add_argument('-p', "--parts", action="store", default=108, type=int)
-    parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
-    parser.add_argument('-t', "--time", action="store", default=10, type=int)
-    parser.add_argument('-l', "--log", action="store", default=1000, type=int)
+    parser.add_argument('-M', "--concentration", action="store", default=0.5, type=float)
+    parser.add_argument('-e', "--pos-valency", action="store", default=1, type=int)
+    parser.add_argument('-en', "--neg-valency", action="store", default=-1, type=int)
+    parser.add_argument('-cl', "--confinment-len", action="store", default=3, type=float)
+    parser.add_argument('-pd', "--pos-diameter", action="store", default=0.714, type=float)
+    parser.add_argument('-nd', "--neg-diameter", action="store", default=0.714, type=float)
+    parser.add_argument('-d', "--charge-density", action="store", default=0.0, type=float)
+
+    parser.add_argument('-t', "--delta-t", action="store", default=0.01, type=float)
+    parser.add_argument('-s', "--steps", action="store", default=20000, type=int)
+    parser.add_argument('-l', "--log", action="store", default=100, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
-    parser.add_argument("--neg-diam", action="store", default=0.627, type=float)
-    parser.add_argument("--pos-diam", action="store", default=0.474, type=float)
     args = parser.parse_args()
 
     tfmanip.toggle_xla(args.xla)
