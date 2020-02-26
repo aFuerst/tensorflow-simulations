@@ -10,3 +10,4 @@ kB = 1								# Boltzmann constant in reduced units
 unitlength = None
 scalefactor = None
 T = 1 # temperature in reduced units
+elj = 1.0

@@ -72,6 +72,17 @@ def py_array_to_np(array, dtype=np_dtype):
     """
     return np.array(array, dtype=dtype)
 
+def create_feed_dict(*list_of_dict_pairs):
+    """
+    create tensorflow feed dictionary from a series of (real_data, placeholder_tensor) dictionary pairs
+    dictionary pairs must have matching keys associating real & palceholder data
+    """
+    ret = {}
+    for real, placeholder in list_of_dict_pairs:
+        for key in real.keys():
+            ret[placeholder[key]] = real[key]
+    return ret
+
 if __name__ == "__main__":
     positions = np.ones((5,3))
     masses = np.ones(5)

@@ -5,6 +5,10 @@ from common import py_array_to_np as conv
 
 class Interface:
     def __init__(self, salt_conc_in: float, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=1, initial_eout: float=1):
+        self.salt_conc_in = salt_conc_in
+        self.salt_conc_out = salt_conc_out
+        self.salt_valency_in = salt_valency_in
+        self.salt_valency_out = salt_valency_out
         self.ein = initial_ein
         self.eout = initial_eout
         #   useful combinations of different dielectric constants (inside and outside)
@@ -66,6 +70,7 @@ class Interface:
         ion_charges = []
         ion_masses = []
         ion_diconst = []
+        # TODO: Implement crystal pack ion placement
         while (len(saltion_in_pos) != total_saltions_inside):
             x = np.random.random()
             x = (1 - x) * (-r0_x) + x * (r0_x)
@@ -144,3 +149,5 @@ class Interface:
             right_plane[key] = conv(right_plane[key])
         self.left_plane = left_plane
         self.right_plane = right_plane
+        self.tf_left_plane, self.tf_place_left_plane = common.make_tf_versions_of_dict(left_plane)
+        self.tf_right_plane, self.tf_place_right_plane = common.make_tf_versions_of_dict(right_plane)
