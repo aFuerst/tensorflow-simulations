@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import argparse, math, os
 
-import utility, control, interface, bin, thermostat, md
+import utility, control, interface, bin, thermostat, md, velocities, forces
 import tensorflow_manip as tfmanip
 
 np.random.seed(0) # be consistent
@@ -62,16 +62,20 @@ def start_sim(tf_sess_config, args):
         mdremote.extra_compute = int(mdremote.steps * 0.01)
         mdremote.moviefreq = int(mdremote.steps * 0.001)
 
-    box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in, salt_valency_out=0, bx=bx/utility.unitlength, by=by/utility.unitlength, bz=bz/utility.unitlength)
+    simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in, salt_valency_out=0, bx=bx/utility.unitlength, by=by/utility.unitlength, bz=bz/utility.unitlength)
     nz_in = -1
     # concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter
-    ion_dict = box.put_saltions_inside(pz=pz_in, nz=nz_in, concentration=salt_conc_in, positive_diameter_in=positive_diameter_in, \
+    ion_dict = simul_box.put_saltions_inside(pz=pz_in, nz=nz_in, concentration=salt_conc_in, positive_diameter_in=positive_diameter_in, \
                                             negative_diameter_in=negative_diameter_in, counterions=counterions, valency_counterion=valency_counterion, \
                                             counterion_diameter_in=counterion_diameter_in, bigger_ion_diameter=bigger_ion_diameter)
-    box.discretize(smaller_ion_diameter / utility.unitlength, fraction_diameter, charge_meshpoint)
-    bins = bin.make_bins(box, bin_width=0.05, ion_diams=ion_dict["ion_diameters"])
-    thermos = thermostat.make_thremostats(chain_length_real=5, ions_count=len(ion_dict["ion_pos"]))
-    md.run_md_sim(box, thermos, ion_dict, bins, charge_meshpoint, valency_counterion)
+    simul_box.discretize(smaller_ion_diameter / utility.unitlength, fraction_diameter, charge_meshpoint)
+    bins = bin.make_bins(simul_box, bin_width=0.05, ion_diams=ion_dict[interface.ion_diameters_str])
+    thermos = thermostat.make_thremostats(chain_length_real=5, ions_count=len(ion_dict[interface.ion_pos_str]))
+    
+    ion_dict = velocities.initialize_particle_velocities(ion_dict, thermos)
+    ion_dict = forces.initialize_forces(ion_dict)
+    
+    md.run_md_sim(simul_box, thermos, ion_dict, bins, charge_meshpoint, valency_counterion, mdremote)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

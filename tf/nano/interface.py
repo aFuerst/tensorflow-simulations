@@ -3,6 +3,14 @@ import math
 import numpy as np
 from common import py_array_to_np as conv
 
+ion_for_str = "ion_forces"
+saltion_pos_str = "saltion_pos"
+ion_pos_str = "ion_pos"
+ion_charges_str = "ion_charges"
+ion_diameters_str = "ion_diameters"
+ion_masses_str = "ion_masses"
+ion_diconst_str = "ion_diconst"
+
 class Interface:
     def __init__(self, salt_conc_in: float, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=1, initial_eout: float=1):
         self.salt_conc_in = salt_conc_in
@@ -110,8 +118,8 @@ class Interface:
                 ion_diconst.append(self.ein)
             saltion_in_pos.append(posvec)		# create a salt ion
             ion_pos.append(posvec)			# copy the salt ion to the stack of all ions
-        ret = {"saltion_pos":conv(saltion_in_pos), "ion_pos":conv(ion_pos), "ion_charges":conv(ion_charges),\
-                 "ion_masses":conv(ion_masses), "ion_diameters":conv(ion_diameter), "ion_diconst":conv(ion_diconst)}
+        ret = {saltion_pos_str:conv(saltion_in_pos), ion_pos_str:conv(ion_pos), ion_charges_str:conv(ion_charges),\
+                 ion_masses_str:conv(ion_masses), ion_diameters_str:conv(ion_diameter), ion_diconst_str:conv(ion_diconst)}
         return ret
         
     def discretize(self, smaller_ion_diameter: float, f: float, charge_meshpoint: float):

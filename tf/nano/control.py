@@ -3,7 +3,7 @@ class Control:
         self.verbose=args.verbose
         self.fakemass=None		# fictitious mass used in molecular dynamics # not relevant for this code
         self.timestep=args.delta_t	# timestep used in molecular dynamics
-        self.steps=args.step			# number of steps in molecular dynamics
+        self.steps=args.steps			# number of steps in molecular dynamics
         self.hiteqm=100000		# wait till this step
         self.freq=100 			# frequency of sampling
         self.on=None			# y if fmd needs to turn on

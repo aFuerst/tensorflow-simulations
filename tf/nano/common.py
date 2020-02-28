@@ -4,6 +4,17 @@ import numpy as np
 np_dtype = np.float64
 tf_dtype = tf.dtypes.float64
 
+def wrap_distances_on_edges(simul_box, distances):
+    """
+    Wrap distances on x and y axis. Z axis is unchanged
+    """
+    with tf.name_scope("wrap_distances_on_edges"):
+        edges = tf.constant([simul_box.lx, simul_box.ly, 0], name="box_edges", dtype=tf_dtype)
+        edges_half = tf.constant([simul_box.lx/2, simul_box.ly/2, 0], name="box_edges_half", dtype=tf_dtype)
+        neg_edges_half = tf.constant([-simul_box.lx/2, -simul_box.ly/2, 0], name="box_edges_half", dtype=tf_dtype)
+        wrapped_distances = tf.compat.v1.where_v2(distances > edges_half, distances - edges, distances, name="where_edges_half")
+        return tf.compat.v1.where_v2(wrapped_distances < neg_edges_half, wrapped_distances + edges, wrapped_distances, name="where_neg_edges_half")
+
 def magnitude(tensor, axis=2, keepdims=False):
     """
     Calculate the magnituge of a Tensor, should be in shape [x,y,z] or [[x,y,z]]
@@ -31,6 +42,12 @@ def magnitude_np(array):
     """
     return np.sqrt(np.sum(np.power(array,2.0)))
 
+def make_tf_place_of_single(np_arr, name=None):
+    """
+    Return TF placeholder version of given numpy array
+    """
+    return tf.compat.v1.placeholder(dtype=tf_dtype, name=name if name is None else name+"_placeholder")
+
 def make_tf_place_of_nparray(np_arr, name=None):
     """
     Return TF placeholder version of given numpy array
@@ -51,7 +68,10 @@ def make_tf_placeholder_of_dict(dictonary):
     """
     tf_placeholders = {}
     for key in dictonary.keys():
-        tf_placeholders[key] = make_tf_place_of_nparray(dictonary[key], key)
+        if(type(dictonary[key]) is float or type(dictonary[key]) is int):
+            tf_placeholders[key] = make_tf_place_of_single(dictonary[key], key)
+        else:      
+            tf_placeholders[key] = make_tf_place_of_nparray(dictonary[key], key)
     return tf_placeholders
 
 
