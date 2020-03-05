@@ -6,31 +6,47 @@ scalar_shape = ()
 
 class Thremostat:
     def __init__(self, i, Q:float, T:float, dof:float, xi:float, eta:float, hold:float):
-        self.n = "therm_"+str(i)+"_"
+        self.orig = type(i) is not str 
+        self.n = i if not self.orig else "therm_"+str(i)+"_"
         self.Q=Q
         self.T=T
         self.dof=dof
         self.xi=xi
         self.eta=eta
         self.hold=hold
-
-        self.Q_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"Q_place", shape=scalar_shape)
-        self.T_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"T_place", shape=scalar_shape)
-        self.dof_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"dof_place", shape=scalar_shape)
-        self.xi_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"xi_place", shape=scalar_shape)
-        self.eta_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"eta_place", shape=scalar_shape)
-        self.hold_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"hold_place", shape=scalar_shape)
+        if self.orig:
+            self.Q_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"Q_place", shape=scalar_shape)
+            self.T_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"T_place", shape=scalar_shape)
+            self.dof_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"dof_place", shape=scalar_shape)
+            self.xi_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"xi_place", shape=scalar_shape)
+            self.eta_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"eta_place", shape=scalar_shape)
+            self.hold_place=tf.compat.v1.placeholder(dtype=common.tf_dtype, name=self.n+"hold_place", shape=scalar_shape)
 
     def to_feed_dict(self):
-        return {self.Q_place:self.Q, self.T_place:self.T, self.dof_place:self.dof, self.xi_place:self.xi, self.eta_place:self.eta, self.hold_place:self.hold}
+        if self.orig:
+            return {self.Q_place:self.Q, self.T_place:self.T, self.dof_place:self.dof, self.xi_place:self.xi, self.eta_place:self.eta, self.hold_place:self.hold}
+        else:
+            return {self.n+"Q_place":self.Q, self.n+"T_place":self.T, self.n+"dof_place":self.dof, self.n+"xi_place":self.xi, self.n+"eta_place":self.eta, self.n+"hold_place":self.hold}
 
-    def to_fetch(self):
+    def get_placeholders(self):
         return self.Q_place, self.T_place, self.dof_place, self.xi_place, self.eta_place, self.hold_place
 
-def to_fetch(therms):
+    def run_output_to_feed(therm_ops_dict, therm_output):
+        ret = {}
+        for therm_op_dict_k, therm_op_dict_v in therm_ops_dict.items():
+            out = therm_output[therm_op_dict_k]
+            for i, value in enumerate(out):
+                ret[therm_op_dict_v[i].name] = out[i]
+        # print("new therm feed", ret)
+        return ret
+        # for t_k, t_v in therms_out.items():
+        #     t_in.append(thermostat.Thremostat(t_k, *t_v))
+        # ion_feed = common.create_feed_dict((ion_dict_out, tf_ion_place))
+
+def get_placeholders(therms):
     ret = {}
     for therm in therms:
-        ret[therm.n] = therm.to_fetch()
+        ret[therm.n] = therm.get_placeholders()
     return ret
 
 def therms_to_feed_dict(therms):
@@ -79,18 +95,6 @@ def update_eta(therms, dt: float):
         for j in range(len(therms)-1):
             therms[j].eta_place = therms[j].eta + 0.5 * dt * therms[j].xi_place
         return therms
-
-# calculate potential energy
-# TODO: verify this is right
-# def potential_energy(therms):
-#     with tf.name_scope("therms_potential_energy"):
-#         return therms["dof"] * utility.kB * utility.T * therms["eta"]
-
-# calculate kinetic energy
-# TODO: verify this is right
-# def kinetic_energytherms(therms):
-#     with tf.name_scope("therms_kinetic_energytherms"):
-#         return 0.5 * therms["Q"] * therms["xi"] * therms["xi"]
 
 if __name__ == "__main__":
     from tensorflow_manip import silence

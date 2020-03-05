@@ -1,5 +1,6 @@
-import utility
 import tensorflow as tf
+import numpy as np
+import utility, interface
 
 def make_bins(box, bin_width, ion_diams):
     bins = []
@@ -19,14 +20,18 @@ def make_bins(box, bin_width, ion_diams):
     bins[len(bins) - 2].midPoint = 0.5 * (bins[len(bins) - 2].lower + bins[len(bins) - 2].higher)
     return bins
 
-@tf.function
-def tf_get_ion_bin_density(box, ions, bins):
-    r = ions[:, 2] # get z-axis value
-    r = r + (0.5*box.lz)
-    bin_nums = r / bins[0].width 
+def tf_get_ion_bin_density(box, ion_dict, bins):
+    z_pos = ion_dict[interface.ion_pos_str][:, -1]  # get z-axis value
+    print(z_pos)
+    
+    r = z_pos + (0.5*box.lz)
+    bin_nums = r / utility.bin_width
     bin_nums = tf.dtypes.cast(bin_nums, tf.int32)
-    # bin_nums = ints[:, 2]
-    return tf.sort(bin_nums) 
+    return bin_nums
+
+def count_bin_density(bin_nums):
+    unique, counts = np.unique(bin_nums, return_counts=True)
+    return dict(zip(unique, counts))
 
 # converted from 'bin_ions'
 def get_ion_bin_density(box, ions, bins):
@@ -62,3 +67,21 @@ class Bin:
         self.lower = 0.5 * (-lz) + bin_num * bin_width
         self.higher = 0.5 * (-lz) + (bin_num + 1) * bin_width
         self.midPoint = 0.5 * (self.lower + self.higher)
+
+if __name__ == "__main__":
+    tf.compat.v1.random.set_random_seed(0)
+    from tensorflow_manip import silence, toggle_cpu
+    silence()
+    utility.unitlength = 1
+    utility.scalefactor = utility.epsilon_water * utility.lB_water / utility.unitlength
+    ion_dict = {interface.ion_pos_str:tf.random.uniform((50,3)), interface.ion_diameters_str:tf.ones((50,3))}
+    simul_box = interface.Interface(salt_conc_in=0.5, salt_conc_out=0, salt_valency_in=1, salt_valency_out=1, bx=3, by=3, bz=3, initial_ein=1, initial_eout=1)
+    bins = make_bins(simul_box, bin_width=0.05, ion_diams=ion_dict[interface.ion_diameters_str])
+
+    sess = tf.compat.v1.Session()
+    sess.as_default()
+    sess.run(tf.compat.v1.global_variables_initializer())
+    op = tf_get_ion_bin_density(simul_box, ion_dict, bins)
+    results = sess.run(op)
+    print(results)
+    print(count_bin_density(results))

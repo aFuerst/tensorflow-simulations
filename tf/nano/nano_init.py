@@ -75,7 +75,7 @@ def start_sim(tf_sess_config, args):
     ion_dict = velocities.initialize_particle_velocities(ion_dict, thermos)
     ion_dict = forces.initialize_forces(ion_dict)
     
-    md.run_md_sim(simul_box, thermos, ion_dict, bins, charge_meshpoint, valency_counterion, mdremote)
+    md.run_md_sim(args, simul_box, thermos, ion_dict, bins, charge_meshpoint, valency_counterion, mdremote)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

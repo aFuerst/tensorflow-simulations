@@ -66,8 +66,6 @@ def _right_wall_lj_force(simul_box, ion_dict):
     make a dummy particle with the same diameter as the ion and touching right of the right wall s. t. it is closest to the ion
     """
     with tf.name_scope("right_wall_lj_force"):
-        # TODO/QUESTION: Is this necessary?
-        # if (ion[i].posvec.z > 0.5 * box.lz - ion[i].diameter)  // avoiding calculating interactions between right wall and ions in bulk.
         dummy_mult = tf.constant([1, 1, 0.5*simul_box.lz], name="dummy_mult_right", dtype=common.tf_dtype)
         dummy_pos = ion_dict[interface.ion_pos_str] * dummy_mult
         distances = ion_dict[interface.ion_pos_str] - dummy_pos
@@ -105,8 +103,6 @@ def _left_wall_lj_force(simul_box, ion_dict):
     make a dummy particle with the same diameter as the ion and touching left of the left wall s. t. it is closest to the ion
     """
     with tf.name_scope("left_wall_lj_force"):
-        # TODO/QUESTION: Is this necessary?
-        # if (ion[i].posvec.z < -0.5 * box.lz + ion[i].diameter)   // avoiding calculating interactions between left wall and ions in bulk.
         dummy_mult = tf.constant([1, 1, -0.5*simul_box.lz], name="dummy_mult_left", dtype=common.tf_dtype)
         dummy_pos = ion_dict[interface.ion_pos_str] * dummy_mult
         distances = ion_dict[interface.ion_pos_str] - dummy_pos

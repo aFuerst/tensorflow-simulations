@@ -11,3 +11,4 @@ unitlength = None
 scalefactor = None
 T = 1 # temperature in reduced units
 elj = 1.0
+bin_width = 0.05
