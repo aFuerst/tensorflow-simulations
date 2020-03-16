@@ -46,7 +46,7 @@ def make_tf_place_of_single(np_arr, name=None):
     """
     Return TF placeholder version of given numpy array
     """
-    return tf.compat.v1.placeholder(dtype=tf_dtype, name=name if name is None else name+"_placeholder")
+    return tf.compat.v1.placeholder(dtype=tf_dtype, shape=(), name=name if name is None else name+"_placeholder")
 
 def make_tf_place_of_nparray(np_arr, name=None):
     """
@@ -67,12 +67,14 @@ def make_tf_placeholder_of_dict(dictonary):
     Return two identical dictionaries that are TF variables and TF placeholders of the given dictionaries numpy arrays
     """
     tf_placeholders = {}
+    placeholder_names = {}
     for key in dictonary.keys():
         if(type(dictonary[key]) is float or type(dictonary[key]) is int):
             tf_placeholders[key] = make_tf_place_of_single(dictonary[key], key)
         else:      
             tf_placeholders[key] = make_tf_place_of_nparray(dictonary[key], key)
-    return tf_placeholders
+        placeholder_names[key] = tf_placeholders[key].name
+    return tf_placeholders, placeholder_names
 
 
 def make_tf_versions_of_dict(dictonary):
@@ -80,7 +82,7 @@ def make_tf_versions_of_dict(dictonary):
     Return two identical dictionaries that are TF variables and TF placeholders of the given dictionaries numpy arrays
     """
     tf_variables = {}
-    tf_placeholders = make_tf_placeholder_of_dict(dictonary)
+    tf_placeholders, placeholder_names = make_tf_placeholder_of_dict(dictonary)
     for key in dictonary.keys():
         tf_variables[key] = tf.compat.v1.Variable(initial_value=dictonary[key], name=key, shape=dictonary[key].shape, dtype=tf_dtype)
 
@@ -102,6 +104,12 @@ def create_feed_dict(*list_of_dict_pairs):
         for key in real.keys():
             ret[placeholder[key]] = real[key]
     return ret
+
+def throw_if_bad_boundaries(positions, simul_box):
+    if (positions[:,2] > simul_box.lz).any():
+        raise Exception("BAD DATA", simul_box.lz, positions[positions[:,2] > simul_box.lz])
+    if (positions[:,2] < -simul_box.lz).any():
+        raise Exception("BAD DATA", -simul_box.lz, positions[positions[:,2] < -simul_box.lz])
 
 if __name__ == "__main__":
     positions = np.ones((5,3))

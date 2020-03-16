@@ -4,7 +4,6 @@ import numpy as np
 from common import py_array_to_np as conv
 
 ion_for_str = "ion_forces"
-saltion_pos_str = "saltion_pos"
 ion_pos_str = "ion_pos"
 ion_charges_str = "ion_charges"
 ion_diameters_str = "ion_diameters"
@@ -40,14 +39,14 @@ class Interface:
             self.mean_sep_out = 0
 
         # simulation box size (in reduced units)
+        print("box_size:", " bx:", bx, " by:", by, " bz:", bz)
         self.lx = bx
         self.ly = by
         self.lz = bz
 
-    def put_saltions_inside(self, pz: int, nz: int, concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter: float):
+    def put_saltions_inside(self, pz: int, nz: int, concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter: float, crystal_pack: bool):
         # establish the number of inside salt ions first
-        # Note: salt concentration is the concentration of one kind of ions.
-        # also the factor of 0.6 is there in order to be consistent with units.
+        # Note: salt concentration is the concentration of one kind of ions, also the factor of 0.6 is there in order to be consistent with units.
 
         volume_box = self.lx*self.ly*self.lz
 
@@ -57,7 +56,7 @@ class Interface:
 
         total_pions_inside = abs(nz) * total_nions_inside / pz
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
-
+        print("total_saltions_inside", total_saltions_inside)
         # express diameter in consistent units
         bigger_ion_diameter = bigger_ion_diameter / utility.unitlength # the bigger_ion_diameter can be cation or anion depending on their sizes
         positive_diameter_in = positive_diameter_in / utility.unitlength
@@ -71,56 +70,88 @@ class Interface:
         r0_z = 0.5 * self.lz - 0.5 * bigger_ion_diameter
 
         # generate salt ions inside
-        saltion_in_pos = []
         ion_pos = []
         ion_diameter = []
         ion_valency = []
         ion_charges = []
         ion_masses = []
         ion_diconst = []
-        # TODO: Implement crystal pack ion placement
-        while (len(saltion_in_pos) != total_saltions_inside):
-            x = np.random.random()
-            x = (1 - x) * (-r0_x) + x * (r0_x)
-            
-            y = np.random.random()
-            y = (1 - y) * (-r0_y) + y * (r0_y)
-            
-            z = np.random.random()
-            z = (1 - z) * (-r0_z) + z * (r0_z)
-            
-            posvec = np.asarray([x,y,z])
-            continuewhile = False
-            i = 0
-            while (i < len(ion_pos) and continuewhile == False): # ensure ions are far enough apart
-                if (common.magnitude_np(posvec - ion_pos[i]) <= (0.5*bigger_ion_diameter+0.5*ion_diameter[i])):
-                    continuewhile = True
-                i+=1
-            if (continuewhile == True):
-                continue
-            if (len(saltion_in_pos) < counterions):
-                ion_diameter.append(counterion_diameter_in)
-                ion_valency.append(valency_counterion)
-                ion_charges.append(valency_counterion*1.0)
-                ion_masses.append(1.0)
-                ion_diconst.append(self.ein)
-            elif (len(saltion_in_pos) >= counterions and len(saltion_in_pos) < (total_pions_inside + counterions)):
-                ion_diameter.append(positive_diameter_in)
-                ion_valency.append(pz)
-                ion_charges.append(pz*1.0)
-                ion_masses.append(1.0)
-                ion_diconst.append(self.ein)
-            else:
-                ion_diameter.append(negative_diameter_in)
-                ion_valency.append(nz)
-                ion_charges.append(nz*1.0)
-                ion_masses.append(1.0)
-                ion_diconst.append(self.ein)
-            saltion_in_pos.append(posvec)		# create a salt ion
-            ion_pos.append(posvec)			# copy the salt ion to the stack of all ions
-        ret = {saltion_pos_str:conv(saltion_in_pos), ion_pos_str:conv(ion_pos), ion_charges_str:conv(ion_charges),\
+        if not crystal_pack:
+            while (len(ion_pos) != total_saltions_inside):
+                x = np.random.random()
+                x = (1 - x) * (-r0_x) + x * (r0_x)
+                
+                y = np.random.random()
+                y = (1 - y) * (-r0_y) + y * (r0_y)
+                
+                z = np.random.random()
+                z = (1 - z) * (-r0_z) + z * (r0_z)
+                
+                posvec = np.asarray([x,y,z])
+                continuewhile = False
+                i = 0
+                while (i < len(ion_pos) and continuewhile == False): # ensure ions are far enough apart
+                    if (common.magnitude_np(posvec - ion_pos[i]) <= (0.5*bigger_ion_diameter+0.5*ion_diameter[i])):
+                        continuewhile = True
+                    i+=1
+                if (continuewhile == True):
+                    continue
+                if (len(ion_pos) < counterions):
+                    ion_diameter.append(counterion_diameter_in)
+                    ion_valency.append(valency_counterion)
+                    ion_charges.append(valency_counterion*1.0)
+                    ion_masses.append(1.0)
+                    ion_diconst.append(self.ein)
+                elif (len(ion_pos) >= counterions and len(ion_pos) < (total_pions_inside + counterions)):
+                    ion_diameter.append(positive_diameter_in)
+                    ion_valency.append(pz)
+                    ion_charges.append(pz*1.0)
+                    ion_masses.append(1.0)
+                    ion_diconst.append(self.ein)
+                else:
+                    ion_diameter.append(negative_diameter_in)
+                    ion_valency.append(nz)
+                    ion_charges.append(nz*1.0)
+                    ion_masses.append(1.0)
+                    ion_diconst.append(self.ein)
+                ion_pos.append(posvec)			# copy the salt ion to the stack of all ions
+        else:
+            num_ions_in_lx = int(self.lx/ bigger_ion_diameter)
+            num_ions_in_ly = int(self.ly/ bigger_ion_diameter)
+            num_ions_in_lz = int(self.lz/ bigger_ion_diameter)
+
+            for i in range(num_ions_in_lx):
+                x = (-self.lx/2 + (0.5 * bigger_ion_diameter)) + i * bigger_ion_diameter
+                for j in range(num_ions_in_ly):
+                    y = (-self.ly/2 + (0.5 * bigger_ion_diameter)) + j * bigger_ion_diameter
+                    for k in range(num_ions_in_lz):
+                        if len(ion_pos) < total_saltions_inside:
+                            z = (-self.lz/2 + (0.5 * bigger_ion_diameter)) + k * bigger_ion_diameter
+                            posvec = np.array([x,y,z])
+                            if (x > ((self.lx/2)-(0.5 * bigger_ion_diameter)) or y > ((self.ly/2)-(0.5 * bigger_ion_diameter)) or z > ((self.lz/2)-(0.5 * bigger_ion_diameter))):
+                                continue
+                            if (len(ion_pos) < counterions):
+                                ion_diameter.append(counterion_diameter_in)
+                                ion_valency.append(valency_counterion)
+                                ion_charges.append(valency_counterion*1.0)
+                                ion_masses.append(1.0)
+                                ion_diconst.append(self.ein)
+                            elif (len(ion_pos) >= counterions and len(ion_pos) < (total_pions_inside + counterions)):
+                                ion_diameter.append(positive_diameter_in)
+                                ion_valency.append(pz)
+                                ion_charges.append(pz*1.0)
+                                ion_masses.append(1.0)
+                                ion_diconst.append(self.ein)
+                            else:
+                                ion_diameter.append(negative_diameter_in)
+                                ion_valency.append(nz)
+                                ion_charges.append(nz*1.0)
+                                ion_masses.append(1.0)
+                                ion_diconst.append(self.ein)
+                            ion_pos.append(posvec)
+
+        return {ion_pos_str:conv(ion_pos), ion_charges_str:conv(ion_charges),\
                  ion_masses_str:conv(ion_masses), ion_diameters_str:conv(ion_diameter), ion_diconst_str:conv(ion_diconst)}
-        return ret
         
     def discretize(self, smaller_ion_diameter: float, f: float, charge_meshpoint: float):
         self.width = f * self.lx

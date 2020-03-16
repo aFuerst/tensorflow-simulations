@@ -1,87 +1,59 @@
 import tensorflow as tf
 import numpy as np
-import utility, interface
+import utility, interface, common
 
-def make_bins(box, bin_width, ion_diams):
-    bins = []
-    number_of_bins = int(box.lz / bin_width)
+bin_volume = None
+bin_width = None
+number_of_bins = None
+pos_bin_density_records = []
+ned_bin_density_records = []
+
+def make_bins(box, set_bin_width):
+    global bin_volume
+    global bin_width
+    global number_of_bins
+    number_of_bins = int(box.lz / set_bin_width)
     bin_width = (box.lz / number_of_bins) #  To make discretization of bins symmetric, we recalculate the bin_width
-    # Add two extra bins for contact point densities at both ends
-    number_of_bins += 2
-    for bin_num in range(number_of_bins):
-        bins.append(Bin(bin_num, bin_width, box.lx, box.ly, box.lz))
-    leftContact = -0.5 * box.lz + 0.5 * ion_diams[0] - 0.5 * bins[0].width
-    rightContact = 0.5 * box.lz - 0.5 * ion_diams[0] - 0.5 * bins[0].width
-    bins[len(bins) -1].lower = leftContact
-    bins[len(bins) - 2].lower = rightContact
-    bins[len(bins) - 1].higher = leftContact + bins[0].width
-    bins[len(bins) - 2].higher = rightContact + bins[0].width
-    bins[len(bins) - 1].midPoint = 0.5 * (bins[len(bins) - 1].lower + bins[len(bins) - 1].higher)
-    bins[len(bins) - 2].midPoint = 0.5 * (bins[len(bins) - 2].lower + bins[len(bins) - 2].higher)
-    return bins
+    bin_volume = (bin_width * box.lx * box.ly) * (utility.unitlength * utility.unitlength * utility.unitlength) * 0.6022
 
-def tf_get_ion_bin_density(box, ion_dict, bins):
+def tf_get_ion_bin_density(box, ion_dict):
+    charge_filter = tf.math.greater(ion_dict[interface.ion_charges_str], 0)
+    neg_charge_filter =  tf.math.logical_not(charge_filter)
     z_pos = ion_dict[interface.ion_pos_str][:, -1]  # get z-axis value
-    print(z_pos)
-    
-    r = z_pos + (0.5*box.lz)
-    bin_nums = r / utility.bin_width
-    bin_nums = tf.dtypes.cast(bin_nums, tf.int32)
-    return bin_nums
+    bin_nums = tf.dtypes.cast(z_pos + (0.5*box.lz) / bin_width, tf.int32)
 
-def count_bin_density(bin_nums):
-    unique, counts = np.unique(bin_nums, return_counts=True)
-    return dict(zip(unique, counts))
+    pos_bin_count = tf.math.bincount(tf.boolean_mask(bin_nums, charge_filter), minlength=number_of_bins, maxlength=number_of_bins, dtype=common.tf_dtype) / bin_volume
+    neg_bin_count = tf.math.bincount(tf.boolean_mask(bin_nums, neg_charge_filter), minlength=number_of_bins, maxlength=number_of_bins, dtype=common.tf_dtype) / bin_volume
+    return pos_bin_count, neg_bin_count
 
-# converted from 'bin_ions'
-def get_ion_bin_density(box, ions, bins):
-    r = None
-    bin_number = 0
+def record_densities(pos_bin_positions, neg_bin_positions):
+    pos_bin_density_records.append(pos_bin_positions)
+    ned_bin_density_records.append(neg_bin_positions)
 
-    for bin in bins:
-        bin.n = 0
-    for i in range(len(ions)):
-        # 0th bin is for left wall bin 0 starts at -0.5*box.lz respect to ion origin 
-        r = 0.5 * box.lz + ion[i].posvec.z    # r should be positive, counting from half lz and that is the adjustment here bin 0 corresponds to left wall
-        bin_number = int(r / bins[0].width)
-        bins[bin_number].n = bins[bin_number].n + 1
-    # This is to get contact point densities
-    for i in range(len(ions)):
-        # 0th bin is for left wall bin 0 starts at -0.5*box.lz respect to ion origin */
-        r = 0.5 * box.lz + ion[i].posvec.z
-        if (bins[len(bins) - 2].lower <= ion[i].posvec.z and ion[i].posvec.z < bins[len(bins) - 2].higher):
-            bins[len(bins) - 2].n = bins[len(bins) - 2].n + 1
-        elif (bins[len(bins) - 1].lower <= ion[i].posvec.z and ion[i].posvec.z < bins[len(bins) - 1].higher):
-            bins[len(bins) - 1].n = bins[len(bins) - 1].n + 1
-
-    density = []
-    for bin_num in range(len(bins)):
-        density.append(bins[bin_num].n / bins[bin_num].volume) # push_back is the culprit, array goes out of bound
-    # volume now measured in inverse Molars, such that density is in M
-
-class Bin:
-    def __init__(self, bin_num: int, bin_width: float, lx: float, ly: float, lz: float):
-        self.n = 0       # initialize number of ions in bin to be zero
-        self.width = bin_width
-        self.volume = (bin_width * lx * ly) * (utility.unitlength * utility.unitlength * utility.unitlength) * 0.6022
-        self.lower = 0.5 * (-lz) + bin_num * bin_width
-        self.higher = 0.5 * (-lz) + (bin_num + 1) * bin_width
-        self.midPoint = 0.5 * (self.lower + self.higher)
+def get_density_profile():
+    #TODO: this
+    pass
 
 if __name__ == "__main__":
     tf.compat.v1.random.set_random_seed(0)
     from tensorflow_manip import silence, toggle_cpu
     silence()
     utility.unitlength = 1
+    bz = 3
     utility.scalefactor = utility.epsilon_water * utility.lB_water / utility.unitlength
-    ion_dict = {interface.ion_pos_str:tf.random.uniform((50,3)), interface.ion_diameters_str:tf.ones((50,3))}
-    simul_box = interface.Interface(salt_conc_in=0.5, salt_conc_out=0, salt_valency_in=1, salt_valency_out=1, bx=3, by=3, bz=3, initial_ein=1, initial_eout=1)
-    bins = make_bins(simul_box, bin_width=0.05, ion_diams=ion_dict[interface.ion_diameters_str])
-
+    ion_dict = {
+                    interface.ion_pos_str:tf.random.uniform((50,3), minval=-bz/2, maxval=bz/2),
+                    interface.ion_diameters_str:tf.ones((50,3)),
+                    interface.ion_charges_str:tf.random.uniform((50,), minval=-1, maxval=1)
+               }
+    simul_box = interface.Interface(salt_conc_in=0.5, salt_conc_out=0, salt_valency_in=1, salt_valency_out=1, bx=3, by=3, bz=bz, initial_ein=1, initial_eout=1)
+    make_bins(simul_box, set_bin_width=0.05)
+    print("number_of_bins", number_of_bins)
     sess = tf.compat.v1.Session()
     sess.as_default()
     sess.run(tf.compat.v1.global_variables_initializer())
-    op = tf_get_ion_bin_density(simul_box, ion_dict, bins)
-    results = sess.run(op)
-    print(results)
-    print(count_bin_density(results))
+
+    p, n = tf_get_ion_bin_density(simul_box, ion_dict)
+    p, n = sess.run((p, n))
+    print("pos", p)
+    print("neg", n)

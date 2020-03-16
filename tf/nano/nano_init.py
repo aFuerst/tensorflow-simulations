@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import argparse, math, os
 
-import utility, control, interface, bin, thermostat, md, velocities, forces
+import utility, control, interface, bin, thermostat, md, velocities, forces, common
 import tensorflow_manip as tfmanip
 
 np.random.seed(0) # be consistent
@@ -64,18 +64,20 @@ def start_sim(tf_sess_config, args):
 
     simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in, salt_valency_out=0, bx=bx/utility.unitlength, by=by/utility.unitlength, bz=bz/utility.unitlength)
     nz_in = -1
-    # concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter
     ion_dict = simul_box.put_saltions_inside(pz=pz_in, nz=nz_in, concentration=salt_conc_in, positive_diameter_in=positive_diameter_in, \
                                             negative_diameter_in=negative_diameter_in, counterions=counterions, valency_counterion=valency_counterion, \
-                                            counterion_diameter_in=counterion_diameter_in, bigger_ion_diameter=bigger_ion_diameter)
+                                            counterion_diameter_in=counterion_diameter_in, bigger_ion_diameter=bigger_ion_diameter, crystal_pack=args.random_pos_init)
+    if mdremote.validate:
+        print("positions", ion_dict[interface.ion_pos_str])
+        common.throw_if_bad_boundaries(ion_dict[interface.ion_pos_str], simul_box)
     simul_box.discretize(smaller_ion_diameter / utility.unitlength, fraction_diameter, charge_meshpoint)
-    bins = bin.make_bins(simul_box, bin_width=0.05, ion_diams=ion_dict[interface.ion_diameters_str])
+    bin.make_bins(simul_box, set_bin_width=0.05)
     thermos = thermostat.make_thremostats(chain_length_real=5, ions_count=len(ion_dict[interface.ion_pos_str]))
     
     ion_dict = velocities.initialize_particle_velocities(ion_dict, thermos)
     ion_dict = forces.initialize_forces(ion_dict)
     
-    md.run_md_sim(args, simul_box, thermos, ion_dict, bins, charge_meshpoint, valency_counterion, mdremote)
+    md.run_md_sim(simul_box, thermos, ion_dict, charge_meshpoint, valency_counterion, mdremote)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -90,12 +92,14 @@ if __name__ == "__main__":
     parser.add_argument('-cl', "--confinment-len", action="store", default=3, type=float)
     parser.add_argument('-pd', "--pos-diameter", action="store", default=0.714, type=float)
     parser.add_argument('-nd', "--neg-diameter", action="store", default=0.714, type=float)
-    parser.add_argument('-d', "--charge-density", action="store", default=0.0, type=float)
+    parser.add_argument('-d', "--charge-density", action="store", default=-0.01, type=float)
 
     parser.add_argument('-t', "--delta-t", action="store", default=0.01, type=float)
     parser.add_argument('-s', "--steps", action="store", default=20000, type=int)
-    parser.add_argument('-l', "--log", action="store", default=100, type=int)
+    parser.add_argument('-f', "--freq", action="store", default=100, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
+    parser.add_argument("--validate", action="store_true")
+    parser.add_argument("--random-pos-init", action="store_false")
     args = parser.parse_args()
 
     tfmanip.toggle_xla(args.xla)
