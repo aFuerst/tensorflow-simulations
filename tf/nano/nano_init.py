@@ -62,7 +62,8 @@ def start_sim(tf_sess_config, args):
         mdremote.extra_compute = int(mdremote.steps * 0.01)
         mdremote.moviefreq = int(mdremote.steps * 0.001)
 
-    simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in, salt_valency_out=0, bx=bx/utility.unitlength, by=by/utility.unitlength, bz=bz/utility.unitlength)
+    simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in, salt_valency_out=0, bx=bx/utility.unitlength, by=by/utility.unitlength, bz=bz/utility.unitlength, \
+        initial_ein=mdremote.ein, initial_eout=mdremote.eout)
     nz_in = -1
     ion_dict = simul_box.put_saltions_inside(pz=pz_in, nz=nz_in, concentration=salt_conc_in, positive_diameter_in=positive_diameter_in, \
                                             negative_diameter_in=negative_diameter_in, counterions=counterions, valency_counterion=valency_counterion, \
@@ -93,6 +94,8 @@ if __name__ == "__main__":
     parser.add_argument('-pd', "--pos-diameter", action="store", default=0.714, type=float)
     parser.add_argument('-nd', "--neg-diameter", action="store", default=0.714, type=float)
     parser.add_argument('-d', "--charge-density", action="store", default=-0.01, type=float)
+    parser.add_argument("--ein", action="store", default=80, type=float)
+    parser.add_argument("--eout", action="store", default=80, type=float)
 
     parser.add_argument('-t', "--delta-t", action="store", default=0.01, type=float)
     parser.add_argument('-s', "--steps", action="store", default=20000, type=int)

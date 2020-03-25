@@ -10,3 +10,5 @@ class Control:
         self.timestep=args.delta_t	# timestep used in molecular dynamics
         self.steps=args.steps // self.freq			# number of steps in molecular dynamics
         self.validate=args.validate
+        self.ein=args.ein
+        self.eout=args.eout

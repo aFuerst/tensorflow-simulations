@@ -8,10 +8,10 @@ ion_pos_str = "ion_pos"
 ion_charges_str = "ion_charges"
 ion_diameters_str = "ion_diameters"
 ion_masses_str = "ion_masses"
-ion_diconst_str = "ion_diconst"
+ion_epsilon_str = "ion_epsilon"
 
 class Interface:
-    def __init__(self, salt_conc_in: float, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=1, initial_eout: float=1):
+    def __init__(self, salt_conc_in: float, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=80, initial_eout: float=80):
         self.salt_conc_in = salt_conc_in
         self.salt_conc_out = salt_conc_out
         self.salt_valency_in = salt_valency_in
@@ -75,7 +75,7 @@ class Interface:
         ion_valency = []
         ion_charges = []
         ion_masses = []
-        ion_diconst = []
+        ion_epsilon = []
         if not crystal_pack:
             while (len(ion_pos) != total_saltions_inside):
                 x = np.random.random()
@@ -101,19 +101,19 @@ class Interface:
                     ion_valency.append(valency_counterion)
                     ion_charges.append(valency_counterion*1.0)
                     ion_masses.append(1.0)
-                    ion_diconst.append(self.ein)
+                    ion_epsilon.append(self.ein)
                 elif (len(ion_pos) >= counterions and len(ion_pos) < (total_pions_inside + counterions)):
                     ion_diameter.append(positive_diameter_in)
                     ion_valency.append(pz)
                     ion_charges.append(pz*1.0)
                     ion_masses.append(1.0)
-                    ion_diconst.append(self.ein)
+                    ion_epsilon.append(self.ein)
                 else:
                     ion_diameter.append(negative_diameter_in)
                     ion_valency.append(nz)
                     ion_charges.append(nz*1.0)
                     ion_masses.append(1.0)
-                    ion_diconst.append(self.ein)
+                    ion_epsilon.append(self.ein)
                 ion_pos.append(posvec)			# copy the salt ion to the stack of all ions
         else:
             num_ions_in_lx = int(self.lx/ bigger_ion_diameter)
@@ -135,25 +135,26 @@ class Interface:
                                 ion_valency.append(valency_counterion)
                                 ion_charges.append(valency_counterion*1.0)
                                 ion_masses.append(1.0)
-                                ion_diconst.append(self.ein)
+                                ion_epsilon.append(self.ein)
                             elif (len(ion_pos) >= counterions and len(ion_pos) < (total_pions_inside + counterions)):
                                 ion_diameter.append(positive_diameter_in)
                                 ion_valency.append(pz)
                                 ion_charges.append(pz*1.0)
                                 ion_masses.append(1.0)
-                                ion_diconst.append(self.ein)
+                                ion_epsilon.append(self.ein)
                             else:
                                 ion_diameter.append(negative_diameter_in)
                                 ion_valency.append(nz)
                                 ion_charges.append(nz*1.0)
                                 ion_masses.append(1.0)
-                                ion_diconst.append(self.ein)
+                                ion_epsilon.append(self.ein)
                             ion_pos.append(posvec)
 
         return {ion_pos_str:conv(ion_pos), ion_charges_str:conv(ion_charges),\
-                 ion_masses_str:conv(ion_masses), ion_diameters_str:conv(ion_diameter), ion_diconst_str:conv(ion_diconst)}
+                 ion_masses_str:conv(ion_masses), ion_diameters_str:conv(ion_diameter), ion_epsilon_str:conv(ion_epsilon)}
         
     def discretize(self, smaller_ion_diameter: float, f: float, charge_meshpoint: float):
+        print("charge_meshpoint", charge_meshpoint)
         self.width = f * self.lx
         nx = int(self.lx / self.width)
         ny = int(self.ly / self.width)

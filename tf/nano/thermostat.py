@@ -2,6 +2,12 @@ import tensorflow as tf
 import numpy as np
 import utility, common
 
+def to_string(therm_dict):
+    # print(therm_dict)
+    return "xi:{}, eta:{}".format(therm_dict["xi"],therm_dict["eta"])
+    # return "Q:{}, T:{}, dof:{}, xi:{}, eta:{}, hold:{}".format(\
+    #     therm_dict["Q"],therm_dict["T"],therm_dict["dof"], therm_dict["xi"],therm_dict["eta"],therm_dict["hold"])
+
 def create_thermostat(i, Q:float, T:float, dof:float, xi:float, eta:float, hold:float):
     return {"Q":Q, "T":T, "dof":dof, "xi":xi, "eta":eta, "hold":hold}
 
@@ -26,22 +32,22 @@ def make_thremostats(chain_length_real, ions_count):
     therms = {}
     i=0
     if (chain_length_real == 1):
-        therms[i] = create_thermostat(i, 0.0, utility.T, 3* ions_count, 0.0, 0.0, 0.0)
+        therms[i] = create_thermostat(i=i, Q=0.0, T=utility.T, dof=3* ions_count, xi=0.0, eta=0.0, hold=0.0)
     else:
-        therms[i] = create_thermostat(i, Q, utility.T, 3* ions_count, 0.0, 0.0, 0.0)
+        therms[i] = create_thermostat(i=i, Q=Q, T=utility.T, dof=3* ions_count, xi=0.0, eta=0.0, hold=0.0)
         i += 1
         while (len(therms) != chain_length_real - 1):
-            therms[i] = create_thermostat(i, Q / (3 * ions_count), utility.T, 1.0, 0.0, 0.0, 0.0)
+            therms[i] = create_thermostat(i=i, Q=Q / (3 * ions_count), T=utility.T, dof=1.0, xi=0.0, eta=0.0, hold=0.0)
             i += 1
         # final therms is dummy therms (dummy therms always has zero mass)
-        therms[i] = create_thermostat(i, 0, utility.T, 3*ions_count, 0.0, 0.0, 0.0)
+    therms[i] = create_thermostat(i=i, Q=0.0, T=utility.T, dof=3*ions_count, xi=0.0, eta=0.0, hold=0.0)
     return therms
-  
+    
 # returns full therms dictionary with updated xi tensor
 def update_chain_xi(therms, dt: float, ke):
     with tf.name_scope("update_chain_xi"):
-        for j in range(len(therms)-1):
-            if (j == len(therms)-1):
+        for j in range(1, len(therms)-1): # 0 and len(therms)-1 have Q==0 which are skipped 
+            if (j >= len(therms)-1):
                 raise Exception("can't change last j")
             if (j != 0):
                 therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + 0.5 * dt * (1.0 / therms[j]["Q"]) *\
@@ -57,7 +63,9 @@ def update_chain_xi(therms, dt: float, ke):
 # returns full therms dictionary with updated eta tensor
 def update_eta(therms, dt: float):
     with tf.name_scope("update_eta"):
-        for j in range(len(therms)-1):
+        for j in range(1, len(therms)-1): # 0 and len(therms)-1 have Q==0 which are skipped
+            if (j >= len(therms)-1):
+                raise Exception("can't change last j")
             therms[j]["eta"] = therms[j]["eta"] + 0.5 * dt * therms[j]["xi"]
         return therms
 

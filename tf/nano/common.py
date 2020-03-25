@@ -106,10 +106,11 @@ def create_feed_dict(*list_of_dict_pairs):
     return ret
 
 def throw_if_bad_boundaries(positions, simul_box):
-    if (positions[:,2] > simul_box.lz).any():
-        raise Exception("BAD DATA", simul_box.lz, positions[positions[:,2] > simul_box.lz])
-    if (positions[:,2] < -simul_box.lz).any():
-        raise Exception("BAD DATA", -simul_box.lz, positions[positions[:,2] < -simul_box.lz])
+    edge = simul_box.lz/2
+    if (positions[:, 2] > edge).any():
+        raise Exception("BAD RIGHT", edge, positions[positions[:,2] > edge], np.nonzero(positions[:,2] > edge))
+    if (positions[:, 2] < -edge).any():
+        raise Exception("BAD LEFT", -edge, positions[positions[:,2] < -edge], np.nonzero(positions[:,2] < -edge))
 
 if __name__ == "__main__":
     positions = np.ones((5,3))

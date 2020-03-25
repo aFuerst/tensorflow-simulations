@@ -8,11 +8,14 @@ def clean():
     shutil.rmtree("./output/")
     os.mkdir("./output/")
 
-def save(i, thermostats, ion_dict):
+def save(i, thermostats, ion_dict, therms_dict):
     path="./output/"
     np.savetxt(os.path.join(path, "{}-forces".format(i)), ion_dict[interface.ion_for_str])
     np.savetxt(os.path.join(path, "{}-velocities".format(i)), ion_dict[velocities.ion_vel_str])
     np.savetxt(os.path.join(path, "{}-positions".format(i)), ion_dict[interface.ion_pos_str])
+    with open(os.path.join(path, "{}-thermostats".format(i)), mode="w") as f:
+        for key, value in therms_dict.items():
+            f.write(str(key)+":"+thermostat.to_string(value)+"\n")
 
 def build_graph(simul_box, thermostats, ion_dict, dt:float, initial_ke, sample_iter):
     # TODO: get working with tf.function => faster graph execution with or without?
@@ -41,22 +44,30 @@ def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, ther
     # print("ion_dict", ion_dict)
     ion_feed = common.create_feed_dict((ion_dict, tf_ion_place))
     ft = thermostat.therms_to_feed_dict(thermostats, thermos_place)
-    save(0, ft, ion_dict)
+    save(0, ft, ion_dict, thermostats)
     # print("ion_feed", ion_feed)
     for i in range(1, mdremote.steps+1):
         feed = {**planes, **ion_feed, **ft}
         s = time.time()
         therms_out, ion_dict_out, (pos_bin_density, neg_bin_density) = session.run([thermo_g, ion_g, bin_density_g], feed_dict=feed)
-        if mdremote.validate:
-            common.throw_if_bad_boundaries(ion_dict_out[interface.ion_pos_str], simul_box)
-        print("pos_bin_density", pos_bin_density)
-        print("neg_bin_density", neg_bin_density)
+        # print("pos_bin_density", pos_bin_density)
+        # print("neg_bin_density", neg_bin_density)
         ion_feed = common.create_feed_dict((ion_dict_out, tf_ion_place))
         # print(therms_out)
         ft = thermostat.therms_to_feed_dict(therms_out, thermos_place)
-        save(i, ft, ion_dict_out)
-        pos_bin_density, neg_bin_density = session.run([bin_density_g], feed_dict=feed)
+        save(i, ft, ion_dict_out, therms_out)
+        positions = ion_dict_out[interface.ion_pos_str]
+        # if (positions[:,2] > simul_box.lz).any():
+        #     print("BAD RIGHT nonzero", simul_box.lz, np.nonzero(positions[:,2] > simul_box.lz))
+        #     print("non", positions[np.nonzero(positions[:,2] > simul_box.lz)])
+        #     print("BAD RIGHT", simul_box.lz, positions[positions[:,2] > simul_box.lz])
+        # if (positions[:,2] < -simul_box.lz).any():
+        #     print("BAD LEFT", -simul_box.lz, positions[positions[:,2] < -simul_box.lz])
+        if mdremote.validate:
+            common.throw_if_bad_boundaries(ion_dict_out[interface.ion_pos_str], simul_box)
+        # pos_bin_density, neg_bin_density = session.run([bin_density_g], feed_dict=feed)
         bin.record_densities(pos_bin_density, neg_bin_density)
+        print("iteration {} done".format(i))
     bin.get_density_profile()
 
 def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint: float, valency_counterion: int, mdremote):
