@@ -11,11 +11,10 @@ def initialize_particle_velocities(ion_dict, thermostats):
     Numpy implementation to generate random particle starting velocities
     Velocities will all be 0 if there is only one (1) thermostat
     """
-    if len(thermostats) == 1:
-        # start with no velocities
-        ion_dict[ion_vel_str] =  np.zeroes(ion_dict[interface.ion_pos_str].shape, dtype=common.np_dtype) 
+    if len(thermostats) == 1: # start with no velocities
+        ion_dict[ion_vel_str] =  np.zeros(ion_dict[interface.ion_pos_str].shape, dtype=common.np_dtype) 
     else:
-        p_sigma = math.sqrt(utility.kB * utility.T / (2.0 * ion_dict[interface.ion_masses_str][0]))        # Maxwell distribution width
+        p_sigma = math.sqrt(utility.kB * utility.T / (2.0 * ion_dict[interface.ion_masses_str][0])) # Maxwell distribution width
 
         random_vels = np.random.normal(0, p_sigma, ion_dict[interface.ion_pos_str].shape)
         avg_vel = np.average(random_vels, axis=0)
@@ -30,9 +29,3 @@ def update_velocity(ion_dict, dt: float, expfac):
     with tf.name_scope("update_velocity"):
         ion_dict[ion_vel_str] = (ion_dict[ion_vel_str] * expfac) + (ion_dict[interface.ion_for_str] * (0.5 * dt * tf.math.sqrt(expfac)))
         return ion_dict
-
-if __name__ == "__main__":
-    positions = np.ones((5,3))
-    masses = np.ones(5)
-    thms = np.ones(5)
-    print(initialize_particle_velocities(positions, masses, thms))

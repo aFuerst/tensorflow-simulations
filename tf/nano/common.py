@@ -1,21 +1,26 @@
 import tensorflow as tf
 import numpy as np
 
+from control import Control
+
 np_dtype = np.float64
 tf_dtype = tf.dtypes.float64
+
+def init(control:Control):
+    pass
 
 def wrap_distances_on_edges(simul_box, distances):
     """
     Wrap distances on x and y axis. Z axis is unchanged
     """
     with tf.name_scope("wrap_distances_on_edges"):
-        edges = tf.constant([simul_box.lx, simul_box.ly, 0], name="box_edges", dtype=tf_dtype)
+        edges = tf.constant([simul_box.lx, simul_box.ly, 0], name="box_edges", dtype=tf_dtype) # Z-edge can be zero since we set edge_half to also zero nothing happens
         edges_half = tf.constant([simul_box.lx/2, simul_box.ly/2, 0], name="box_edges_half", dtype=tf_dtype)
-        neg_edges_half = tf.constant([-simul_box.lx/2, -simul_box.ly/2, 0], name="box_edges_half", dtype=tf_dtype)
+        neg_edges_half = tf.constant([-simul_box.lx/2, -simul_box.ly/2, 0], name="neg_box_edges_half", dtype=tf_dtype)
         wrapped_distances = tf.compat.v1.where_v2(distances > edges_half, distances - edges, distances, name="where_edges_half")
         return tf.compat.v1.where_v2(wrapped_distances < neg_edges_half, wrapped_distances + edges, wrapped_distances, name="where_neg_edges_half")
 
-def magnitude(tensor, axis=2, keepdims=False):
+def magnitude(tensor, axis:int=2, keepdims:bool=False):
     """
     Calculate the magnituge of a Tensor, should be in shape [x,y,z] or [[x,y,z]]
     The dimension specified by 'axis' must be exactly three (3)
@@ -25,7 +30,7 @@ def magnitude(tensor, axis=2, keepdims=False):
     with tf.name_scope("magnitude"):
         return tf.math.sqrt(magnitude_squared(tensor, axis, keepdims))
         
-def magnitude_squared(tensor, axis=2, keepdims=False):
+def magnitude_squared(tensor, axis:int=2, keepdims:bool=False):
     """
     Calculate the magnituge of a Tensor, should be in shape [x,y,z] or [[x,y,z]]
     The dimension specified by 'axis' must be exactly three (3)
@@ -111,6 +116,10 @@ def throw_if_bad_boundaries(positions, simul_box):
         raise Exception("BAD RIGHT", edge, positions[positions[:,2] > edge], np.nonzero(positions[:,2] > edge))
     if (positions[:, 2] < -edge).any():
         raise Exception("BAD LEFT", -edge, positions[positions[:,2] < -edge], np.nonzero(positions[:,2] < -edge))
+
+
+def wrap_vectorize(fn, elems):
+    return tf.function(lambda: tf.compat.v1.vectorized_map(fn=fn, elems=elems))()
 
 if __name__ == "__main__":
     positions = np.ones((5,3))

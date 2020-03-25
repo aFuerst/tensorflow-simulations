@@ -73,7 +73,7 @@ def start_sim(tf_sess_config, args):
         common.throw_if_bad_boundaries(ion_dict[interface.ion_pos_str], simul_box)
     simul_box.discretize(smaller_ion_diameter / utility.unitlength, fraction_diameter, charge_meshpoint)
     bin.make_bins(simul_box, set_bin_width=0.05)
-    thermos = thermostat.make_thremostats(chain_length_real=5, ions_count=len(ion_dict[interface.ion_pos_str]))
+    thermos = thermostat.make_thremostats(chain_length_real=4, ions_count=len(ion_dict[interface.ion_pos_str]))
     
     ion_dict = velocities.initialize_particle_velocities(ion_dict, thermos)
     ion_dict = forces.initialize_forces(ion_dict)
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
-    parser.add_argument('-M', "--concentration", action="store", default=0.5, type=float)
+    parser.add_argument('-M', "--concentration", action="store", default=0.50, type=float)
     parser.add_argument('-e', "--pos-valency", action="store", default=1, type=int)
     parser.add_argument('-en', "--neg-valency", action="store", default=-1, type=int)
     parser.add_argument('-cl', "--confinment-len", action="store", default=3, type=float)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     parser.add_argument("--ein", action="store", default=80, type=float)
     parser.add_argument("--eout", action="store", default=80, type=float)
 
-    parser.add_argument('-t', "--delta-t", action="store", default=0.01, type=float)
+    parser.add_argument('-t', "--delta-t", action="store", default=0.001, type=float)
     parser.add_argument('-s', "--steps", action="store", default=20000, type=int)
     parser.add_argument('-f', "--freq", action="store", default=100, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)

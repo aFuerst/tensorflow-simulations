@@ -23,3 +23,4 @@ names.txt
 slm_output/
 omp/**
 omp/
+*.pyc
