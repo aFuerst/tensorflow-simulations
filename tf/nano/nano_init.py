@@ -68,12 +68,10 @@ def start_sim(tf_sess_config, args):
     ion_dict = simul_box.put_saltions_inside(pz=pz_in, nz=nz_in, concentration=salt_conc_in, positive_diameter_in=positive_diameter_in, \
                                             negative_diameter_in=negative_diameter_in, counterions=counterions, valency_counterion=valency_counterion, \
                                             counterion_diameter_in=counterion_diameter_in, bigger_ion_diameter=bigger_ion_diameter, crystal_pack=args.random_pos_init)
-    if mdremote.validate:
-        print("positions", ion_dict[interface.ion_pos_str])
-        common.throw_if_bad_boundaries(ion_dict[interface.ion_pos_str], simul_box)
+
     simul_box.discretize(smaller_ion_diameter / utility.unitlength, fraction_diameter, charge_meshpoint)
     bin.make_bins(simul_box, set_bin_width=0.05)
-    thermos = thermostat.make_thremostats(chain_length_real=4, ions_count=len(ion_dict[interface.ion_pos_str]))
+    thermos = thermostat.make_thremostats(chain_length_real=5, ions_count=len(ion_dict[interface.ion_pos_str]))
     
     ion_dict = velocities.initialize_particle_velocities(ion_dict, thermos)
     ion_dict = forces.initialize_forces(ion_dict)

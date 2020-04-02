@@ -73,20 +73,29 @@ def _particle_lj_force(simul_box, ion_dict):
     """
     with tf.name_scope("particle_lj_force"):
         distances = common.wrap_vectorize(fn=lambda atom_pos: ion_dict[interface.ion_pos_str] - atom_pos, elems=ion_dict[interface.ion_pos_str])
-        diams_sum = common.wrap_vectorize(fn=lambda atom_diam: ion_dict[interface.ion_diameters_str] + atom_diam, elems=ion_dict[interface.ion_diameters_str]) * 0.5
-        diams_sum = diams_sum[:,:,tf.newaxis] # add third dimension to match with wrapped_distances and mag_squared later
+        d = common.wrap_vectorize(fn=lambda atom_diam: ion_dict[interface.ion_diameters_str] + atom_diam, elems=ion_dict[interface.ion_diameters_str]) * 0.5
+        d = d[:,:,tf.newaxis] # add third dimension to match with wrapped_distances and r2 later
         wrapped_distances = common.wrap_distances_on_edges(simul_box, distances)
-        mag_squared = common.magnitude_squared(wrapped_distances, keepdims=True) # keep third dimension to match with wrapped_distances
-        diam_2 = tf.math.pow(diams_sum, 2.0, name="square_diam_diff")
-        d_six = tf.math.pow(diams_sum, 6.0, name="diam_6_pow") / tf.math.pow(mag_squared, 3.0, name="mag_6_pow") # magnitude is alread "squared" so only need N/2 power
-        d_twelve = tf.math.pow(diams_sum, 12.0, name="diam_12_pow") / tf.math.pow(mag_squared, 6.0, name="mag_12_pow")
-        slice_forces = wrapped_distances * (48.0 * utility.elj * (((d_twelve - 0.5 * d_six) * (1.0/mag_squared))))
+        r2 = common.magnitude_squared(wrapped_distances, axis=2, keepdims=True) # keep third dimension to match with wrapped_distances
+        d_2 = tf.math.pow(d, 2.0, name="square_diam_diff")
+        # d_6 = tf.math.pow(d, 6.0, name="diam_6_pow") / tf.math.pow(r2, 3.0, name="mag_6_pow") # magnitude is alread "squared" so only need N/2 power
+        # d_12 = tf.math.pow(d, 12.0, name="diam_12_pow") / tf.math.pow(r2, 6.0, name="mag_12_pow")
+        # slice_forces = wrapped_distances * (48.0 * utility.elj * (d_12 - 0.5 * d_6) * (1.0 / r2))
+        
+        d_6 = tf.math.pow(d_2, 3.0, name="diam_6_pow")
+        r_6 = tf.math.pow(r2, 3.0, name="r_6_pow") # magnitude is alread "squared" so only need N/2 power
+        d_12 = tf.math.pow(d_2, 6.0, name="diam_12_pow")
+        r_12 = tf.math.pow(r2, 6.0, name="r_12_pow")
+        slice_forces = wrapped_distances * (48.0 * utility.elj * ((d_12/r_12) - 0.5 * (d_6/r_6)) * (1.0/r2))
+
         # handle case distances pos - atom_pos == 0, causing inf and nan to appear in that position
         # slice_forces = tf.compat.v1.debugging.check_numerics(slice_forces, message="slice_forces lj forces")
-        filter = tf.math.logical_or(tf.math.is_nan(slice_forces), mag_squared < (diam_2*utility.dcut2), name="or")
-        filtered = tf.compat.v1.where_v2(filter, _tf_zero, slice_forces, name="where_or")
+        # filter = tf.math.logical_or(tf.math.is_nan(slice_forces), r2 >= (utility.dcut2*d_2), name="or")
+        slice_forces = tf.compat.v1.where_v2(tf.math.is_nan(slice_forces), _tf_zero, slice_forces, name="where_nan")
+        slice_forces = tf.compat.v1.where_v2(r2 < (utility.dcut2*d_2), slice_forces, _tf_zero, name="where_dcut")
         # filtered = tf.compat.v1.debugging.check_numerics(filtered, message="filtered lj forces")
-        return tf.math.reduce_sum(filtered, axis=0)
+        print("slice_forces", slice_forces)
+        return tf.math.reduce_sum(slice_forces, axis=1)
     
 def _left_wall_lj_force(simul_box, ion_dict):
     """
@@ -96,27 +105,32 @@ def _left_wall_lj_force(simul_box, ion_dict):
     """
     with tf.name_scope("left_wall_lj_force"):
         # if (ion[i].posvec.z > 0.5 * box.lz - ion[i].diameter)
-        mask = ion_dict[interface.ion_pos_str][:, -1] < (-0.5 * simul_box.lz - ion_dict[interface.ion_diameters_str]) #TODO: remove this mask if not cause of sim error
-        # print("mask", mask)
+        mask = ion_dict[interface.ion_pos_str][:, -1] < ((-0.5 * simul_box.lz) - ion_dict[interface.ion_diameters_str]) #TODO: remove this mask if not cause of sim error
         dummy_mult = tf.constant([1, 1, 0], name="dummy_mult_left", dtype=common.tf_dtype)
         dummy_pos = ion_dict[interface.ion_pos_str] * dummy_mult
-        dummy_add = tf.constant([0, 0, -0.5*simul_box.lz], name="dummy_add_left", dtype=common.tf_dtype)
+        #TODO!: replace - 0.5 with 0.5* diameter for correctness
+        dummy_add = tf.constant([0, 0, (-0.5 * simul_box.lz) -0.5], name="dummy_add_left", dtype=common.tf_dtype)
         dummy_pos = dummy_pos + dummy_add
         distances = ion_dict[interface.ion_pos_str] - dummy_pos
-        mag_squared = common.magnitude_squared(distances, axis=1, keepdims=True) # keep 1th dimension to match up with distances later
-        diam_2 = tf.math.pow(ion_dict[interface.ion_diameters_str] * 0.5, 2.0, name="diam_2_pow")[:, tf.newaxis] # add new dimension to match up with distances later
+        r2 = common.magnitude_squared(distances, axis=1, keepdims=True)  # keep 1th dimension to match up with distances later
+        #  + ion_dict[interface.ion_diameters_str] * 0.5
+        diam_2 = tf.math.pow((ion_dict[interface.ion_diameters_str] + ion_dict[interface.ion_diameters_str])
+                             * 0.5, 2.0, name="diam_2_pow")[:, tf.newaxis]  # add new dimension to match up with distances later
 
-        # d_six = tf.math.pow(diam_2, 3.0, name="diam_6_pow")
-        # r_six = tf.math.pow(mag_squared, 3.0, name="mag_6_pow")
+        # d6 = tf.math.pow(diam_2, 3.0, name="diam_6_pow")
+        # r6 = tf.math.pow(r2, 3.0, name="r_6_pow")
 
-        # d_twelve = tf.math.pow(d_six, 2.0, name="diam_12_pow")
-        # r_twelve = tf.math.pow(r_six, 2.0, name="mag_12_pow")
-        # slice_forces = distances * (48.0 * utility.elj * (((d_twelve/r_twelve) - 0.5 * (d_six/r_six)) * (1.0/mag_squared)))
+        # d12 = tf.math.pow(d6, 2.0, name="diam_12_pow")
+        # r12 = tf.math.pow(r6, 2.0, name="r_12_pow")
+        # slice_forces = distances * (48.0 * utility.elj * ((d12/r12) - 0.5 * (d6/r6)) * (1.0/r2))
 
-        d_six = tf.math.pow(diam_2, 3.0, name="diam_6_pow") / tf.math.pow(mag_squared, 3.0, name="mag_6_pow") # magnitude is alread "squared" so only need N/2 power
-        d_twelve = tf.math.pow(diam_2, 6.0, name="diam_12_pow") / tf.math.pow(mag_squared, 6.0, name="mag_12_pow")
-        slice_forces = distances * (48.0 * utility.elj * (((d_twelve - 0.5 * d_six) * (1.0 / mag_squared))))
-        d_cut = tf.compat.v1.where_v2(mag_squared < (diam_2 * utility.dcut2), slice_forces, _tf_zero, name="where_d_cut")
+        d_r_6 = tf.math.pow(diam_2, 3.0, name="diam_6_pow") / tf.math.pow(r2, 3.0, name="r_6_pow") # magnitude is alread "squared" so only need N/2 power
+        d_r_12 = tf.math.pow(diam_2, 6.0, name="diam_12_pow") / tf.math.pow(r2, 6.0, name="r_12_pow")
+        slice_forces = distances * \
+            (48.0 * utility.elj * (d_r_12 - 0.5 * d_r_6) * (1.0 / r2))
+        d_cut = tf.compat.v1.where_v2(
+            r2 < (diam_2 * utility.dcut2), slice_forces, _tf_zero, name="where_d_cut")
+        # return d_cut
         return tf.compat.v1.where_v2(mask[:, tf.newaxis], d_cut, _tf_zero, name="lj_wall_bulk_cutoff")
 
 def _right_wall_lj_force(simul_box, ion_dict):
@@ -125,27 +139,34 @@ def _right_wall_lj_force(simul_box, ion_dict):
     make a dummy particle with the same diameter as the ion and touching right of the right wall s. t. it is closest to the ion
     """
     with tf.name_scope("right_wall_lj_force"):
-        mask = ion_dict[interface.ion_pos_str][:, -1] > (0.5 * simul_box.lz - ion_dict[interface.ion_diameters_str]) #TODO: remove this mask if not cause of sim error
+        mask = ion_dict[interface.ion_pos_str][:, -1] > ((0.5 * simul_box.lz) - ion_dict[interface.ion_diameters_str]) #TODO: remove this mask if not cause of sim error
         dummy_mult = tf.constant([1, 1, 0], name="dummy_mult_right", dtype=common.tf_dtype)
-        dummy_pos = ion_dict[interface.ion_pos_str] * dummy_mult 
-        dummy_add = tf.constant([0, 0, 0.5*simul_box.lz], name="dummy_add_right", dtype=common.tf_dtype)
+        dummy_pos = ion_dict[interface.ion_pos_str] * dummy_mult
+        #TODO!: replace + 0.5 with 0.5* diameter for correctness
+        dummy_add = tf.constant([0, 0, (0.5 * simul_box.lz) + 0.5], name="dummy_add_right", dtype=common.tf_dtype)
+        # dummy_add = dummy_add - (0.5 * ion_dict[interface.ion_diameters_str])
         dummy_pos = dummy_pos + dummy_add
         distances = ion_dict[interface.ion_pos_str] - dummy_pos
-        mag_squared = common.magnitude_squared(distances, axis=1, keepdims=True) # keep 1th dimension to match up with distances later
-        diam_2 = tf.math.pow(ion_dict[interface.ion_diameters_str] * 0.5, 2.0, name="diam_2_pow")[:, tf.newaxis] # add new dimension to match up with distances later
-        # d_six = tf.math.pow(diam_2, 3.0, name="diam_6_pow")
-        # r_six = tf.math.pow(mag_squared, 3.0, name="mag_6_pow")
+        r2 = common.magnitude_squared(distances, axis=1, keepdims=True)  # keep 1th dimension to match up with distances later
+        #  + ion_dict[interface.ion_diameters_str] * 0.5
+        d2 = tf.math.pow((ion_dict[interface.ion_diameters_str] + ion_dict[interface.ion_diameters_str])
+                             * 0.5, 2.0, name="d_2_pow")[:, tf.newaxis]  # add new dimension to match up with distances later
+        # d_six = tf.math.pow(d2, 3.0, name="diam_6_pow")
+        # r_six = tf.math.pow(r2, 3.0, name="mag_6_pow")
 
         # d_twelve = tf.math.pow(d_six, 2.0, name="diam_12_pow")
         # r_twelve = tf.math.pow(r_six, 2.0, name="mag_12_pow")
-        # slice_forces = distances * (48.0 * utility.elj * (((d_twelve/r_twelve) - 0.5 * (d_six/r_six)) * (1.0/mag_squared)))
+        # slice_forces = distances * (48.0 * utility.elj * ((d_twelve/r_twelve) - 0.5 * (d_six/r_six)) * (1.0/r2))
 
-        d_six = tf.math.pow(diam_2, 3.0, name="diam_6_pow") / tf.math.pow(mag_squared, 3.0, name="mag_6_pow") # magnitude is alread "squared" so only need N/2 power
-        d_twelve = tf.math.pow(diam_2, 6.0, name="diam_12_pow") / tf.math.pow(mag_squared, 6.0, name="mag_12_pow")
-        slice_forces = distances * (48.0 * utility.elj * (((d_twelve - 0.5 * d_six) * (1.0/mag_squared))))
+        d_r_6 = tf.math.pow(d2, 3.0, name="diam_6_pow") / tf.math.pow(r2, 3.0, name="mag_6_pow") # magnitude is alread "squared" so only need N/2 power
+        d_r_12 = tf.math.pow(d2, 6.0, name="diam_12_pow") / tf.math.pow(r2, 6.0, name="r_12_pow")
+        slice_forces = distances * \
+            (48.0 * utility.elj * (d_r_12 - 0.5 * d_r_6) * (1.0/r2))
 
-        d_cut = tf.compat.v1.where_v2(mag_squared < (diam_2 * utility.dcut2), slice_forces, _tf_zero, name="where_d_cut")
-        return tf.compat.v1.where_v2(mask[:, tf.newaxis], d_cut, _tf_zero, name="lj_wall_bulk_cutoff")#, distances, dummy_pos
+        d_cut = tf.compat.v1.where_v2(
+            r2 < (d2 * utility.dcut2), slice_forces, _tf_zero, name="where_d_cut")
+        # return d_cut
+        return tf.compat.v1.where_v2(mask[:, tf.newaxis], d_cut, _tf_zero, name="lj_wall_bulk_cutoff"), distances, dummy_pos
 
 def _electrostatic_wall_force(simul_box, ion_dict, wall_dictionary):
     """
@@ -300,6 +321,7 @@ if __name__ == "__main__":
     if(rw_lj.shape != pos_shp):
         raise Exception("bad shape {}".format(rw_lj.shape))
     exit()
+    
     erw = _electrostatic_right_wall_force(simul_box, tf_ion_real)
     print("\nerw", erw)
     erw = erw.eval(session=sess)

@@ -48,7 +48,7 @@ def kinetic_energy(ion_dict):
         return tf.reduce_sum(ke)
 
 def np_kinetic_energy(ion_dict):
-    ke = 0.5 * ion_dict[interface.ion_masses_str] * np.power(common.magnitude_np(ion_dict[velocities.ion_vel_str]), 2)
+    ke = 0.5 * ion_dict[interface.ion_masses_str] * np.power(common.magnitude_np(ion_dict[velocities.ion_vel_str], axis=1), 2)
     return np.sum(ke)
 
 def energy_functional():
@@ -72,3 +72,5 @@ if __name__ == "__main__":
     print("\nke",ke)
     ke, _ = sess.run(fetches=[ke, check_op], feed_dict=feed)
     print(ke)
+
+    print(np_kinetic_energy(ion_dict))

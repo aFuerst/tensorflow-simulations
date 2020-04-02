@@ -1,13 +1,8 @@
 import tensorflow as tf
 import numpy as np
 
-from control import Control
-
 np_dtype = np.float64
 tf_dtype = tf.dtypes.float64
-
-def init(control:Control):
-    pass
 
 def wrap_distances_on_edges(simul_box, distances):
     """
@@ -41,11 +36,14 @@ def magnitude_squared(tensor, axis:int=2, keepdims:bool=False):
         return tf.math.reduce_sum(tf.math.pow(tensor,2.0), axis=axis, keepdims=keepdims)
 
 
-def magnitude_np(array):
+def magnitude_np(array, axis:int=2):
     """
     Calculate the magnituge of a numpy array, should be in shape [x,y,z] or [[x,y,z]]
     """
-    return np.sqrt(np.sum(np.power(array,2.0)))
+    if(array.shape[axis] != 3):
+        raise Exception("Given axis value '{}' did not have a depth of 3, but was '{}'".format(
+            axis, array.shape[axis]))
+    return np.sqrt(np.sum(np.power(array, 2.0), axis=axis))
 
 def make_tf_place_of_single(np_arr, name=None):
     """
@@ -67,27 +65,33 @@ def make_tf_vers_of_nparray(np_arr, name=None):
     placeholder = make_tf_place_of_nparray(np_arr, name)
     return variable, placeholder
 
+def copy_dict(src):
+    ret = {}
+    for key, value in src.items():
+        if type(value) is dict:
+            ret[key] = copy_dict(value)
+        else:
+            ret[key] = value
+    return ret
+
 def make_tf_placeholder_of_dict(dictonary):
     """
     Return two identical dictionaries that are TF variables and TF placeholders of the given dictionaries numpy arrays
     """
     tf_placeholders = {}
-    placeholder_names = {}
     for key in dictonary.keys():
         if(type(dictonary[key]) is float or type(dictonary[key]) is int):
             tf_placeholders[key] = make_tf_place_of_single(dictonary[key], key)
         else:      
             tf_placeholders[key] = make_tf_place_of_nparray(dictonary[key], key)
-        placeholder_names[key] = tf_placeholders[key].name
-    return tf_placeholders, placeholder_names
-
+    return tf_placeholders, copy_dict(tf_placeholders)
 
 def make_tf_versions_of_dict(dictonary):
     """
     Return two identical dictionaries that are TF variables and TF placeholders of the given dictionaries numpy arrays
     """
     tf_variables = {}
-    tf_placeholders, placeholder_names = make_tf_placeholder_of_dict(dictonary)
+    tf_placeholders, _ = make_tf_placeholder_of_dict(dictonary)
     for key in dictonary.keys():
         tf_variables[key] = tf.compat.v1.Variable(initial_value=dictonary[key], name=key, shape=dictonary[key].shape, dtype=tf_dtype)
 
@@ -117,7 +121,6 @@ def throw_if_bad_boundaries(positions, simul_box):
     if (positions[:, 2] < -edge).any():
         raise Exception("BAD LEFT", -edge, positions[positions[:,2] < -edge], np.nonzero(positions[:,2] < -edge))
 
-
 def wrap_vectorize(fn, elems):
     return tf.function(lambda: tf.compat.v1.vectorized_map(fn=fn, elems=elems))()
 
@@ -126,6 +129,10 @@ if __name__ == "__main__":
     masses = np.ones(5)
     thms = np.ones(5)
 
+    d = {"p":positions, "m":masses, "t":thms}
+    p, c = make_tf_placeholder_of_dict(d)
+    print(p)
+    print(c, "\n")
     v, p = make_tf_vers_of_nparray(positions)
     print(v, p)
     v, p = make_tf_vers_of_nparray(masses, name="masses")

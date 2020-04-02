@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import math
 
-import utility, common, interface
+import utility, common, interface, energies
 
 ion_vel_str = "ion_velocities"
 
@@ -15,11 +15,16 @@ def initialize_particle_velocities(ion_dict, thermostats):
         ion_dict[ion_vel_str] =  np.zeros(ion_dict[interface.ion_pos_str].shape, dtype=common.np_dtype) 
     else:
         p_sigma = math.sqrt(utility.kB * utility.T / (2.0 * ion_dict[interface.ion_masses_str][0])) # Maxwell distribution width
-
-        random_vels = np.random.normal(0, p_sigma, ion_dict[interface.ion_pos_str].shape)
+        print("p_sigma", p_sigma)
+        random_vels = np.random.normal(loc=0, scale=p_sigma, size=ion_dict[interface.ion_pos_str].shape)
         avg_vel = np.average(random_vels, axis=0)
+        print("bef avg_vel", avg_vel)
         avg_vel = avg_vel * (1/len(ion_dict[interface.ion_pos_str]))
+
         ion_dict[ion_vel_str] = random_vels-avg_vel
+        print("avg_vel", np.average(ion_dict[ion_vel_str], axis=0))
+        print("abs avg_vel", np.average(np.absolute(ion_dict[ion_vel_str]), axis=0))
+        print("ke", energies.np_kinetic_energy(ion_dict))
     return ion_dict
 
 def update_velocity(ion_dict, dt: float, expfac):

@@ -91,7 +91,7 @@ class Interface:
                 continuewhile = False
                 i = 0
                 while (i < len(ion_pos) and continuewhile == False): # ensure ions are far enough apart
-                    if (common.magnitude_np(posvec - ion_pos[i]) <= (0.5*bigger_ion_diameter+0.5*ion_diameter[i])):
+                    if (common.magnitude_np(posvec - ion_pos[i], axis=0) <= (0.5*bigger_ion_diameter+0.5*ion_diameter[i])):
                         continuewhile = True
                     i+=1
                 if (continuewhile == True):
