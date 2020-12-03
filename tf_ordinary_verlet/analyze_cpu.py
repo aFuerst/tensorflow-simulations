@@ -1,6 +1,8 @@
 import os
-import pandas as pd
+
 import matplotlib as mpl
+import pandas as pd
+
 mpl.use('Agg')
 import matplotlib.pyplot as plot
 

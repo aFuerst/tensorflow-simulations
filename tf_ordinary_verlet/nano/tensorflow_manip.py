@@ -1,5 +1,7 @@
-import tensorflow as tf
 import os
+
+import tensorflow as tf
+
 
 def toggle_xla(xla):
     if xla:
@@ -15,8 +17,8 @@ def toggle_cpu(cpu, thread_count=os.cpu_count()):
 
 def manual_optimizer(optimizer):
     if optimizer:
-        tf.compat.v1.enable_control_flow_v2()
-        # , "pin_to_host_optimization":True # TODO: test for better peformance on high num atom runs?
+        tf.enable_control_flow_v2()
+        # , "pin_to_host_optimization":True
         tf.config.optimizer.set_experimental_options({'constant_folding': True, "layout_optimizer": True, "shape_optimization":True, 
                         "remapping":True, "arithmetic_optimization":True, "dependency_optimization":True, "loop_optimization":True, 
                         "function_optimization":True, "debug_stripper":True, "scoped_allocator_optimization":True, 

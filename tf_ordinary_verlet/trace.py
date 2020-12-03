@@ -1,4 +1,5 @@
-import json, os, sys
+import json
+import sys
 
 trace = "/home/alfuerst/tensorflow-simulations/lj-box/outputs/output-10-10000-1000-108/2000-timeline.json"
 

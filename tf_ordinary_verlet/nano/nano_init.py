@@ -1,8 +1,17 @@
-import tensorflow as tf
-import numpy as np
-import argparse, math, os
+import argparse
+import math
+import os
 
-import utility, control, interface, bin, thermostat, md, velocities, forces, common
+import bin
+import control
+import interface
+import md
+import numpy as np
+import thermostat
+import utility
+import velocities
+
+import forces
 import tensorflow_manip as tfmanip
 
 np.random.seed(0) # be consistent

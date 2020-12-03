@@ -1,7 +1,5 @@
-import os
-
 import tensorflow as tf
-
+import os
 
 def toggle_xla(xla):
     if xla:

@@ -1,7 +1,10 @@
-import tensorflow as tf
+import interface
 import numpy as np
+import tensorflow as tf
+import velocities
 
-import common, utility, velocities, interface
+import common
+
 
 def _unknown():
     """
@@ -55,7 +58,8 @@ def energy_functional():
     pass
 
 if __name__ == "__main__":
-    from tensorflow_manip import silence, toggle_cpu
+    from tensorflow_manip import silence
+
     silence()
     sess = tf.compat.v1.Session()
     sess.as_default()

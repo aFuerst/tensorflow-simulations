@@ -1,6 +1,10 @@
-import pandas as pd
-import os, os.path, pickle, subprocess, time
+import os
+import os.path
+import os.path
+import subprocess
+import time
 import timeit
+
 
 def run_simulation(totaltime, steps, log_freq, number_ljatom, xla, force_cpu, optimize):
     args = []

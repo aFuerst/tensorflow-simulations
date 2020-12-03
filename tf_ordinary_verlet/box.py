@@ -25,11 +25,9 @@ class Box:
         for i in range(num_atoms_linear):
             for j in range(num_atoms_linear):
                 for k in range(num_atoms_linear):
-                    # breaking condition
                     if self._atoms.shape[0] >= num_atoms:
                         return self._atoms, self._atoms.shape[0], self._masses, self._diameters
                     else:
-                        # start filling
                         x = (-self._x/2 + a/2.0) + i*a
                         y = (-self._y/2 + a/2.0) + j*a
                         z = (-self._z/2 + a/2.0) + k*a

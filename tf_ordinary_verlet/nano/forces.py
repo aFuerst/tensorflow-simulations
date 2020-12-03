@@ -1,8 +1,12 @@
-import tensorflow as tf
-import numpy as np
 import math
 
-import common, utility, interface
+import interface
+import numpy as np
+import tensorflow as tf
+import utility
+
+import common
+
 
 def initialize_forces(ion_dict):
     ion_dict[interface.ion_for_str] = np.zeros(ion_dict[interface.ion_pos_str].shape, dtype=common.np_dtype)
@@ -238,7 +242,8 @@ def for_md_calculate_force(simul_box, ion_dict):
 
 if __name__ == "__main__":
     np.random.seed(0)
-    from tensorflow_manip import silence, toggle_cpu
+    from tensorflow_manip import silence
+
     silence()
     sess = tf.compat.v1.Session()
     sess.as_default()

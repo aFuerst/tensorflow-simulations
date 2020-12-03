@@ -1,0 +1,42 @@
+atom:
+    force = [x,y,z]
+    pos = [x,y,z]
+    vel = [x,y,z]
+    size = 1
+
+for i in steps:
+    for atom in atoms:
+        update_velocity(atom)
+    for atom in atoms:
+        update_position(atom)
+
+    update_forces(atoms)
+
+    for atom in atoms:
+        update_velocity(atom)
+
+    compute_energies()
+
+update_velocity(atom):
+    atom[vel] = atom[vel] + atom[force]
+
+update_position(atom):
+    atom[pos] = atom[pos] + atom[vel]
+    atom[pos] % box_size
+
+update_forces(atoms):
+    for atom in atoms:
+        atom[force] = 0
+    for atom_1 in atoms:
+        for atom_2 in atoms:
+            d = (atom_1[pos] - atom_2[pos]) % box_size
+            r = magnitude(d)
+            if r > (atom[size] * box_size)
+                atom_1[force] += 0
+            else
+                r6 = ((r^2)^3)
+                d6 = ((atom[size]^2)^3)
+                atom_1[force] += d * (48 * 1 * ((atom[size]^12/r^12) - 0.5 * (atom[size]^6/r^6)) * (1/r^2) )
+
+magnitude(dist):
+    return sqrt(sum(d^2))
