@@ -1,8 +1,12 @@
-import tensorflow as tf
-import numpy as np
 import math
 
-import utility, common, interface, energies
+import interface
+import numpy as np
+import tensorflow as tf
+import utility
+
+import common
+import energies
 
 ion_vel_str = "ion_velocities"
 

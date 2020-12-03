@@ -1,8 +1,19 @@
-import tensorflow as tf
-import numpy as np
-import time, os, shutil
+import os
+import shutil
+import time
 
-import utility, bin, forces, thermostat, velocities, particle, interface, energies, common
+import bin
+import interface
+import numpy as np
+import particle
+import tensorflow as tf
+import thermostat
+import utility
+import velocities
+
+import common
+import energies
+import forces
 
 ke_placeholder = tf.compat.v1.placeholder(shape=(), dtype=common.tf_dtype, name="kinetic_energy_place")
 

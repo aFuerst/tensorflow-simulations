@@ -1,6 +1,8 @@
+import interface
 import tensorflow as tf
-import numpy as np
-import utility, interface, common
+import utility
+
+import common
 
 bin_volume = None
 bin_width = None
@@ -36,7 +38,8 @@ def get_density_profile():
 
 if __name__ == "__main__":
     tf.compat.v1.random.set_random_seed(0)
-    from tensorflow_manip import silence, toggle_cpu
+    from tensorflow_manip import silence
+
     silence()
     utility.unitlength = 1
     bz = 3

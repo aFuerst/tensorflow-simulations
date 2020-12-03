@@ -1,5 +1,5 @@
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
 np_dtype = np.float64
 tf_dtype = tf.dtypes.float64
@@ -149,7 +149,8 @@ if __name__ == "__main__":
 
     print("\n\n")
     np.random.seed(0)
-    from tensorflow_manip import silence, toggle_cpu
+    from tensorflow_manip import silence
+
     silence()
     sess = tf.compat.v1.Session()
     sess.as_default()

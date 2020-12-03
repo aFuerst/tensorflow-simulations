@@ -1,6 +1,9 @@
-import utility, common
 import math
+
 import numpy as np
+import utility
+
+import common
 from common import py_array_to_np as conv
 
 ion_for_str = "ion_forces"
