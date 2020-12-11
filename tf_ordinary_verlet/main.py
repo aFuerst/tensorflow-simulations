@@ -59,13 +59,15 @@ def run_one_iter(vel, pos, force, edges_half, neg_edges_half, edges, delta_t, fo
         return vel_graph, pos_graph, force_graph, pe_graph, ke_graph, prev_pos_graph, next_pos_graph
 
 @tf.function
-def build_graph(vel_p, pos_p, force_p, edges_half, neg_edges_half, edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_pos_p, next_pos_p):
+def build_graph(vel_p, pos_p, force_p, edges_half, neg_edges_half, edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_pos_p):
 #def build_graph(vel_p, pos_p, force_p, edges_half, neg_edges_half, edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf):
     with tf.name_scope("build_graph"):
         v_g, p_g, f_g = vel_p, pos_p, force_p
         pe_g = ke_g = tf.constant(1, dtype=df_type) # placeholders so variable exists in scope for TF
         prev_position_g = prev_pos_p 
-        next_position_g = next_pos_p 
+        next_position_g = prev_position_g
+        #next_position_g = prev_position_g = prev_pos_p 
+        #next_position_g = next_pos_p 
         # log_tf = tf.constant(0, name="log_freq_counter")
         # cond = lambda i, vs: i < log_freq
         # body = lambda i, vs: (i-1, run_one_iter(vs[0], vs[1], vs[2], edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf))
@@ -76,7 +78,7 @@ def build_graph(vel_p, pos_p, force_p, edges_half, neg_edges_half, edges, delta_
         # return vs
         for _ in tf.range(log_freq):
             v_g, p_g, f_g, pe_g, ke_g, prev_position_g, next_position_g = run_one_iter(v_g, p_g, f_g, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_position_g, next_position_g)
-        return v_g, p_g, f_g, pe_g, ke_g, prev_position_g, next_position_g
+        return v_g, p_g, f_g, pe_g, ke_g, prev_position_g
 
 
 def save(path, id, velocities, positions, forces):
@@ -115,11 +117,12 @@ def run_simulation(totaltime=10, steps=10, log_freq=1, number_ljatom=10, ljatom_
     prev_positions, number_ljatom, masses, diameters = box.fill(number_ljatom, atom_diam=1)
     ljatom_mass_tf = tf.constant(masses, dtype=df_type)
     ljatom_diameter_tf = tf.constant(diameters, dtype=df_type)
-    forces = np.zeros(positions.shape, dtype=df_type)
-    velocities = np.zeros(positions.shape, dtype=df_type)
+    forces = np.zeros(prev_positions.shape, dtype=df_type)
+    velocities = np.zeros(prev_positions.shape, dtype=df_type)
     #Added for ordinary Verlet
     #next_positions = positions #np.zeros(positions.shape, dtype=df_type)
-    positions =     #positions #np.zeros(positions.shape, dtype=df_type)  
+    positions = prev_positions + velocities * delta_t + (delta_t*delta_t*0.5*forces)    #positions #np.zeros(positions.shape, dtype=df_type)  
+    print("\n positions:"+str(positions[0]))
     print("BOX LENGTH====>"+str(bx))
     edges = box.get_edges_as_tf()
     edges_half = edges / 2.0
@@ -127,8 +130,8 @@ def run_simulation(totaltime=10, steps=10, log_freq=1, number_ljatom=10, ljatom_
     forces_zeroes_tf = tf.constant(np.zeros((number_ljatom, 3)), dtype=df_type)
 
     #Question: what is 'position_p or suffix _p'?
-    position_p = tf.compat.v1.placeholder(dtype=df_type, shape=positions.shape, name="position_placeholder_n")
-    next_position_p = tf.compat.v1.placeholder(dtype=df_type, shape=next_positions.shape, name="next_position_placeholder_n")    #placeholder for next position initialized to 0
+    position_p = tf.compat.v1.placeholder(dtype=df_type, shape=prev_positions.shape, name="position_placeholder_n")
+    #next_position_p = tf.compat.v1.placeholder(dtype=df_type, shape=next_positions.shape, name="next_position_placeholder_n")    #placeholder for next position initialized to 0
     prev_position_p = tf.compat.v1.placeholder(dtype=df_type, shape=prev_positions.shape, name="prev_position_placeholder_n")    #placeholder for prev position initialized to 0
     forces_p = tf.compat.v1.placeholder(dtype=df_type, shape=forces.shape, name="forces_placeholder_n")
     velocities_p = tf.compat.v1.placeholder(dtype=df_type, shape=velocities.shape, name="velocities_placeholder_n")
@@ -146,8 +149,10 @@ def run_simulation(totaltime=10, steps=10, log_freq=1, number_ljatom=10, ljatom_
     os.mkdir(subfolder)
 
     #v_g, p_g, f_g, pe_g, ke_g = build_graph(velocities_p, position_p, forces_p, edges_half, neg_edges_half, edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf)
-    v_g, p_g, f_g, pe_g, ke_g, prev_position_g, next_position_g = build_graph(velocities_p, position_p, forces_p, edges_half, neg_edges_half,
-         edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_position_p, next_position_p)
+    #v_g, p_g, f_g, pe_g, ke_g, prev_position_g, next_position_g = build_graph(velocities_p, position_p, forces_p, edges_half, neg_edges_half,
+    #     edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_position_p, next_position_p)
+    v_g, p_g, f_g, pe_g, ke_g, prev_position_g = build_graph(velocities_p, position_p, forces_p, edges_half, neg_edges_half,
+         edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_position_p)
 
     if profile:
         run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
@@ -160,10 +165,10 @@ def run_simulation(totaltime=10, steps=10, log_freq=1, number_ljatom=10, ljatom_
     comp_start = time.time()
     save(subfolder, 0, velocities, positions, forces)
     for x in range(num_iterations):
-        feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities, prev_position_p:prev_positions, next_position_p:next_positions}
+        feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities, prev_position_p:prev_positions, }
         #feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities}
         #velocities, positions, forces, pe, ke = sess.run([v_g, p_g, f_g, pe_g, ke_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
-        velocities, positions, forces, pe, ke, prev_positions, next_positions = sess.run([v_g, p_g, f_g, pe_g, ke_g,prev_position_g, next_position_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
+        velocities, positions, forces, pe, ke, prev_positions = sess.run([v_g, p_g, f_g, pe_g, ke_g, prev_position_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
         if profile:
             from tensorflow.python.client import timeline
             tl = timeline.Timeline(run_metadata.step_stats)
