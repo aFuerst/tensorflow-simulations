@@ -9,8 +9,9 @@ The pipeline for implementing Many Particle MD Surrogate using Tensorflow was de
 
 
 The plan for going about this part is: 
-1. I will start with coding the TF model this week
-  - Writing a file model.py with 'train()' and 'predict()' functions
-2. Writing the preprocessing code for cleaning the input data
-3. The next step will be generating the input data and optimizing the model for accurate predictions
+1. Generating the train and validation data in a text file.
+2. I will start with coding the TF model in model.py
+  - this file will do the training and debugging for the model
+3. Integrating the model to the rest of the repo. 
+
 
