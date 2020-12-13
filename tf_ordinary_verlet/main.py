@@ -55,7 +55,7 @@ def run_one_iter(vel, pos, force, edges_half, neg_edges_half, edges, delta_t, fo
         force_graph = forces.lj_force(pos_graph, edges_half, neg_edges_half, edges, forces_zeroes_tf, ljatom_diameter_tf)
         pe_graph = energies.potential_energy(pos, edges_half, neg_edges_half, edges, ljatom_diameter_tf)
         ke_graph = energies.kinetic_energy(vel, ljatom_diameter_tf)
-        #vel_graph = update_vel(vel, force, delta_t, ljatom_mass_tf, next_pos_graph, prev_pos_graph)
+        print("KINETIC 2:"+str(ke_graph))
         return vel_graph, pos_graph, force_graph, pe_graph, ke_graph, prev_pos_graph, next_pos_graph
 
 @tf.function
@@ -78,33 +78,16 @@ def build_graph(vel_p, pos_p, force_p, edges_half, neg_edges_half, edges, delta_
         # return vs
         for _ in tf.range(log_freq):
             v_g, p_g, f_g, pe_g, ke_g, prev_position_g, next_position_g = run_one_iter(v_g, p_g, f_g, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_position_g, next_position_g)
+        print("KINETIC 3:"+str(ke_g))
         return v_g, p_g, f_g, pe_g, ke_g, prev_position_g
 
 
-def save(path, id, velocities, positions, forces):
+def save(path, id, velocities, positions, forces, ke):
     np.savetxt(os.path.join(path, "{}-forces".format(id)), forces)
     np.savetxt(os.path.join(path, "{}-velocities".format(id)), velocities)
     np.savetxt(os.path.join(path, "{}-positions".format(id)), positions)
+    #np.save(os.path.join(path, "{}-ke".format(id)),ke)
 
-# def toggle_xla(xla):
-#     if xla:
-#         tf.config.optimizer.set_jit(xla)
-
-# def toggle_cpu(cpu, thread_count):
-#     if cpu:
-#         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-#         tf.config.threading.set_inter_op_parallelism_threads(thread_count)
-#         tf.config.threading.set_intra_op_parallelism_threads(thread_count)
-#         return tf.compat.v1.ConfigProto(intra_op_parallelism_threads=thread_count, inter_op_parallelism_threads=thread_count)
-#     return None
-
-# def manual_optimizer(optimizer):
-#     if optimizer:
-#         # , "pin_to_host_optimization":True
-#         tf.config.optimizer.set_experimental_options({'constant_folding': True, "layout_optimizer": True, "shape_optimization":True, 
-#                         "remapping":True, "arithmetic_optimization":True, "dependency_optimization":True, "loop_optimization":True, 
-#                         "function_optimization":True, "debug_stripper":True, "scoped_allocator_optimization":True, 
-#                         "implementation_selector":True, "auto_mixed_precision":True, "debug_stripper": True})
 
 def run_simulation(totaltime=10, steps=10, log_freq=1, number_ljatom=10, ljatom_density=0.1, sess=None, profile=False, xla=True, force_cpu=False, optimizer=False, thread_count=os.cpu_count()):
     tensorflow_manip.toggle_xla(xla)
@@ -153,7 +136,7 @@ def run_simulation(totaltime=10, steps=10, log_freq=1, number_ljatom=10, ljatom_
     #     edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_position_p, next_position_p)
     v_g, p_g, f_g, pe_g, ke_g, prev_position_g = build_graph(velocities_p, position_p, forces_p, edges_half, neg_edges_half,
          edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, prev_position_p)
-
+    print(ke_g.eval())
     if profile:
         run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
         run_metadata = tf.compat.v1.RunMetadata()
@@ -163,12 +146,13 @@ def run_simulation(totaltime=10, steps=10, log_freq=1, number_ljatom=10, ljatom_
     writer = tf.compat.v1.summary.FileWriter(subfolder)
     writer.add_graph(sess.graph)
     comp_start = time.time()
-    save(subfolder, 0, velocities, positions, forces)
+    save(subfolder, 0, velocities, positions, forces, ke_g)
     for x in range(num_iterations):
         feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities, prev_position_p:prev_positions, }
         #feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities}
         #velocities, positions, forces, pe, ke = sess.run([v_g, p_g, f_g, pe_g, ke_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
         velocities, positions, forces, pe, ke, prev_positions = sess.run([v_g, p_g, f_g, pe_g, ke_g, prev_position_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
+        #print("Kinetic energy 5:"+str(ke_g.eval()))
         if profile:
             from tensorflow.python.client import timeline
             tl = timeline.Timeline(run_metadata.step_stats)
@@ -176,7 +160,9 @@ def run_simulation(totaltime=10, steps=10, log_freq=1, number_ljatom=10, ljatom_
             writer.add_run_metadata(run_metadata, 'step%d' % x)
             with open(os.path.join(subfolder, "{}-timeline.json".format((1+x)*log_freq)), 'w') as f:
                 f.write(ctf)
-        save(subfolder, (1+x)*log_freq, velocities, positions, forces)
+        # with tf.session() as sess:
+        #    print("Kinetic energy 5:"+ke_g.eval())
+        save(subfolder, (1+x)*log_freq, velocities, positions, forces, ke)
     return time.time() - comp_start
 
 if __name__ == "__main__":

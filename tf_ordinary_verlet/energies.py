@@ -13,6 +13,7 @@ def kinetic_energy(vel, ljatom_diameter_tf):
         # half = tf.constant(0.5, dtype=tf.float64)
         magnitude = common.magnitude(vel)
         return tf.reduce_sum(0.5 * ljatom_diameter_tf * magnitude * magnitude)
+        #return 0.5 * ljatom_diameter_tf * magnitude * magnitude
 
 """
 Compute the kinetic energy of particles as described by their velocity and mass
