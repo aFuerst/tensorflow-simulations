@@ -3,7 +3,7 @@
 This readme is being wrtten to log the progress made on a specific part of this repository. This part involves developing the surrogate for many particle dynamics.The implementation resides under the folder name "tf". This surrogate will take density as input and predict the energy (kinetic and potential) and temperature of the system.
 
 ## Progress
-#12-9
+# 12-9
 The ordinary verlet works fine and produces the correct result. Result was verified againg the velocity-verlet's TF implementation
 The pipeline for implementing Many Particle MD Surrogate using Tensorflow was designed last week and reviewed in this week's meeting. It can found in the repo with the name 'pipeline.png'. There are some fixes suggested by Vikram. I will be including them and updating it this week.
 
@@ -15,7 +15,7 @@ The plan for going about this part is:
 3. Integrating the model to the rest of the repo. 
 
 
-###12-16
+### 12-16
 Last week the plan above was further modified as below:
 1. Complete and verfiy the energy calculation functions. Verify energy conservation plot in the existing code first.                //this was added
 2. Generating the train and validation data in a text file.
