@@ -17,7 +17,7 @@ The plan for going about this part is:
 
 # 12-16
 Last week the plan above was further modified as below:
-1. Complete and verfiy the energy calculation functions. Verify energy conservation plot in the existing code first.                //this was added
+*1. Complete and verfiy the energy calculation functions. Verify energy conservation plot in the existing code first.                
 2. Generating the train and validation data in a text file.
 3. I will start with coding the TF model in model.py
     - This file will do the training and debugging for the model
