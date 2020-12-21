@@ -4,7 +4,7 @@ from box import Box
 import energies, forces, common
 import tensorflow_manip
 import time, argparse, shutil, math, sys, os
-
+tf.compat.v1.logging.set_verbosity('INFO')
 tf.compat.v1.disable_eager_execution()
 
 pi = 3.141593
@@ -132,6 +132,9 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
     for x in range(num_iterations):
         feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities}
         velocities, positions, forces, pe, ke = sess.run([v_g, p_g, f_g, pe_g, ke_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
+        tf.compat.v1.logging.info('total energy:'+str(ke+pe))
+        tf.compat.v1.logging.info('KE:'+str(ke))
+        tf.compat.v1.logging.info('PE:'+str(pe))
         if profile:
             from tensorflow.python.client import timeline
             tl = timeline.Timeline(run_metadata.step_stats)
@@ -148,10 +151,10 @@ if __name__ == "__main__":
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
-    parser.add_argument('-p', "--parts", action="store", default=30, type=int)
-    parser.add_argument('-s', "--steps", action="store", default=100, type=int)
+    parser.add_argument('-p', "--parts", action="store", default=108, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
     parser.add_argument('-t', "--time", action="store", default=10, type=int)
-    parser.add_argument('-l', "--log", action="store", default=10, type=int)
+    parser.add_argument('-l', "--log", action="store", default=1000, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     args = parser.parse_args()
     comp = run_simulation(profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, log_freq=args.log, totaltime=args.time, optimizer=args.opt, thread_count=args.threads)
