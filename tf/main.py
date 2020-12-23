@@ -5,7 +5,7 @@ import energies, forces, common
 import tensorflow_manip
 import time, argparse, shutil, math, sys, os
 tf.compat.v1.logging.set_verbosity('INFO')
-tf.compat.v1.disable_eager_execution()
+#tf.compat.v1.disable_eager_execution()
 
 pi = 3.141593
 kB = 1.38e-23
@@ -132,9 +132,9 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
     for x in range(num_iterations):
         feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities}
         velocities, positions, forces, pe, ke = sess.run([v_g, p_g, f_g, pe_g, ke_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
-        tf.compat.v1.logging.info('total energy:'+str(ke+pe))
-        tf.compat.v1.logging.info('KE:'+str(ke))
-        tf.compat.v1.logging.info('PE:'+str(pe))
+        tf.compat.v1.logging.info('\ntotal energy:'+str((ke+pe)/number_ljatom))
+        tf.compat.v1.logging.info('KE:'+str(ke/number_ljatom))
+        tf.compat.v1.logging.info('PE:'+str(pe/number_ljatom))
         if profile:
             from tensorflow.python.client import timeline
             tl = timeline.Timeline(run_metadata.step_stats)
@@ -143,6 +143,7 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
             with open(os.path.join(subfolder, "{}-timeline.json".format((1+x)*log_freq)), 'w') as f:
                 f.write(ctf)
         save(subfolder, (1+x)*log_freq, velocities, positions, forces)
+    meta_graph_def = tf.compat.v1.train.export_meta_graph(filename='./tf/outputs/my-model.meta')
     return time.time() - comp_start
     
 if __name__ == "__main__":
@@ -151,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
-    parser.add_argument('-p', "--parts", action="store", default=108, type=int)
+    parser.add_argument('-p', "--parts", action="store", default=350, type=int)
     parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
     parser.add_argument('-t', "--time", action="store", default=10, type=int)
     parser.add_argument('-l', "--log", action="store", default=1000, type=int)

@@ -101,7 +101,7 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
         sess = tf.compat.v1.Session(config=config)
         sess.as_default()
     sess.run(tf.compat.v1.global_variables_initializer())
-    main_folder = "./outputs"
+    main_folder = "./tf_ordinary_verlet/outputs"
     if not os.path.exists(main_folder):
         os.mkdir(main_folder)
     subfolder = os.path.join(main_folder, "output-{}-{}-{}-{}-{}".format(thread_count, totaltime, steps, log_freq, number_ljatom))
@@ -129,9 +129,9 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
         velocities, positions, forces, pe, ke, prev_positions = sess.run([v_g, p_g, f_g, pe_g, ke_g, prev_position_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
         #print("Kinetic energy 5:"+str(ke_g.eval()))    
         #tf.compat.v1.logging.info('@vinita ' + str(ke))   
-        tf.compat.v1.logging.info('KE:'+str(ke))
-        tf.compat.v1.logging.info('PE:'+str(pe))
-        tf.compat.v1.logging.info('total energy:'+str(ke+pe))
+        tf.compat.v1.logging.info('KE:'+str(ke/number_ljatom))
+        tf.compat.v1.logging.info('PE:'+str(pe/number_ljatom))
+        tf.compat.v1.logging.info('total energy:'+str((ke+pe)/number_ljatom))
         if profile:
             from tensorflow.python.client import timeline
             tl = timeline.Timeline(run_metadata.step_stats)
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
-    parser.add_argument('-p', "--parts", action="store", default=108, type=int)
+    parser.add_argument('-p', "--parts", action="store", default=30, type=int)
     parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
     parser.add_argument('-t', "--time", action="store", default=10, type=int)
     parser.add_argument('-l', "--log", action="store", default=1000, type=int)

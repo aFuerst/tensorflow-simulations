@@ -15,7 +15,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/usr/bin/python3",
+            "program": "/usr/bin/python",
             "args": ["bq_sample_read.py", "--gcp_project_id=..."],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
