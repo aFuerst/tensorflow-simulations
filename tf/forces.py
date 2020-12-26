@@ -1,6 +1,5 @@
 import tensorflow as tf
-import common
-tf.compat.v1.logging.set_verbosity('INFO')
+
 """
 Calculates the LJ potential force on particles
     pos: Tensor containing the position of particles in the shape [[x,y,z]]
