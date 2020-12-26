@@ -36,14 +36,14 @@ def update_vel(vel, force, delta_t, ljatom_mass_tf):
         #tf.print('out_temp_vel:'+str(out_temp_vel))
         return temp_vel
 
-def run_one_iter(vel, pos, force, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, pe_graph, ke_graph):
+def run_one_iter(vel, pos, force, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf):
     with tf.name_scope("run_one_iter"):
         vel_graph = update_vel(vel, force, delta_t, ljatom_mass_tf)
         pos_graph = update_pos(pos, vel_graph, edges_half, neg_edges_half, edges, delta_t)
         force_graph = forces.lj_force(pos_graph, edges_half, neg_edges_half, edges, forces_zeroes_tf, ljatom_diameter_tf)
-        pe_graph += energies.potential_energy(pos_graph, edges_half, neg_edges_half, edges, ljatom_diameter_tf)
+        pe_graph = energies.potential_energy(pos_graph, edges_half, neg_edges_half, edges, ljatom_diameter_tf)
         vel_graph = update_vel(vel_graph, force_graph, delta_t, ljatom_mass_tf)
-        ke_graph += energies.kinetic_energy(vel_graph, ljatom_diameter_tf)
+        ke_graph = energies.kinetic_energy(vel_graph, ljatom_diameter_tf)
         #tf.compat.v1.print(tf.math.reduce_sum(pe_graph)/(2.0*10.0),"file:///outputs/energies-pe.out")
         #save_energies("./outputs",tf.math.reduce_sum(pe_graph)/(2.0*10.0),tf.math.reduce_sum(ke_graph)/10.0)
         #out_pos_graph = tf.Print(ke_graph,[ke_graph[0][0],ke_graph[1][0],ke_graph[2][0],ke_graph[3][0],ke_graph[4][0],ke_graph[7][0]])
@@ -67,15 +67,14 @@ def build_graph(vel_p, pos_p, force_p, edges_half, neg_edges_half, edges, delta_
         pe_g = energies.potential_energy(p_g, edges_half, neg_edges_half, edges, ljatom_diameter_tf)
         ke_g = energies.kinetic_energy(v_g, ljatom_diameter_tf)
         for _ in tf.range(log_freq):
-            v_g, p_g, f_g, pe_g, ke_g = run_one_iter(v_g, p_g, f_g, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf,pe_g, ke_g)
+            v_g, p_g, f_g, pe_g, ke_g = run_one_iter(v_g, p_g, f_g, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf)
         return v_g, p_g, f_g, pe_g, ke_g
 
-def save_energies(path, potentials, kinetics, ctr):
-    with open("./outputs/energies.txt", "a") as text_file:
-        print_str = str(ctr)+"  "+str(potentials)+"  "+str(kinetics)+"    "+str(potentials+kinetics)
-        text_file.write(f'\n{print_str}')
+def save_energies(path, potentials, kinetics):
+    tf.io.write_file(os.path.join(path, "pe-energies"), )
+    #np.savetxt(os.path.join(path, "ke-energies"), kinetics)
 
-def save(path, id, velocities, positions, forces):
+def save(path, id, velocities, positions, forces, potentials, kinetics):
     np.savetxt(os.path.join(path, "{}-forces".format(id)), forces)
     np.savetxt(os.path.join(path, "{}-velocities".format(id)), velocities)
     np.savetxt(os.path.join(path, "{}-positions".format(id)), positions)
@@ -108,8 +107,9 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
     config = tensorflow_manip.toggle_cpu(force_cpu, thread_count)
     num_iterations = steps // log_freq
     delta_t = totaltime / steps
-    tot_avg_pe = 0.0
-    tot_avg_ke = 0.0
+    avg_pe = 0.0
+    avg_ke = 0.0
+    avg_te = 0.0
     bx = by = bz = pow(number_ljatom/ljatom_density,1.0/3.0) # box edge lengths
     box = Box(bx, by, bz, df_type)
     positions, number_ljatom, masses, diameters = box.fill(number_ljatom, atom_diam=1)
@@ -117,8 +117,8 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
     ljatom_diameter_tf = tf.constant(diameters, dtype=df_type)
     forces = np.zeros(positions.shape, dtype=df_type)
     velocities = np.zeros(positions.shape, dtype=df_type)
-    potentials = np.zeros((1), dtype=df_type)
-    kinetics = np.zeros((1), dtype=df_type)
+    potentials = np.zeros((number_ljatom, 1), dtype=df_type)
+    kinetics = np.zeros((number_ljatom, 1), dtype=df_type)
     edges = box.get_edges_as_tf()
     edges_half = edges / 2.0
     neg_edges_half = tf.negative(edges_half)
@@ -155,20 +155,17 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
     writer = tf.compat.v1.summary.FileWriter(subfolder)
     writer.add_graph(sess.graph)
     comp_start = time.time()
-    save(subfolder, 0, velocities, positions, forces)
+    save(subfolder, 0, velocities, positions, forces, potentials, kinetics)
     for x in range(num_iterations):
         feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities, potentials_p:potentials, kinetics_p:kinetics}
         velocities, positions, forces, potentials, kinetics = sess.run([v_g, p_g, f_g, pe_g, ke_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
         #tf.compat.v1.logging.info('\ntotal energy:'+str((kinetics+potentials)/number_ljatom))
         #tf.compat.v1.logging.info('KE:'+str(kinetics/number_ljatom))
         #tf.compat.v1.logging.info('PE:'+str(potentials/number_ljatom))
-        avg_pe = potentials/(number_ljatom*log_freq) 
-        avg_ke = kinetics/(number_ljatom*log_freq)
-        print(avg_pe)
-        print(avg_ke)
-        tot_avg_ke+=avg_ke
-        tot_avg_pe+=avg_pe
-        save_energies(main_folder,avg_pe, avg_ke, x)
+        avg_pe += tf.math.reduce_sum(potentials)/(2.0*number_ljatom) 
+        avg_ke += tf.math.reduce_sum(kinetics)/number_ljatom
+        print(sess.run(avg_pe))
+        print(sess.run(avg_ke))
         #tf.compat.v1.logging.info('average pe:'+str(avg_pe))
         #avg_te = avg_ke + avg_pe
         # tf.compat.v1.logging.info('average ke:')
@@ -181,13 +178,11 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
             writer.add_run_metadata(run_metadata, 'step%d' % x)
             with open(os.path.join(subfolder, "{}-timeline.json".format((1+x)*log_freq)), 'w') as f:
                 f.write(ctf)
-        save(subfolder, (1+x)*log_freq, velocities, positions, forces)
-        potentials = np.zeros((1), dtype=df_type)
-        kinetics = np.zeros((1), dtype=df_type)
-    cumm_avg_pe = tot_avg_pe/num_iterations
-    cumm_avg_ke = tot_avg_ke/num_iterations
-    print(cumm_avg_pe)
-    print(cumm_avg_ke)
+        save(subfolder, (1+x)*log_freq, velocities, positions, forces,potentials, kinetics)
+    cumm_avg_pe = avg_pe/num_iterations
+    cumm_avg_ke = avg_ke/num_iterations
+    print(sess.run(cumm_avg_pe))
+    print(sess.run(cumm_avg_ke))
     meta_graph_def = tf.compat.v1.train.export_meta_graph(filename='./tf/outputs/my-model.meta')
     return time.time() - comp_start
     
@@ -197,10 +192,10 @@ if __name__ == "__main__":
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
-    parser.add_argument('-p', "--parts", action="store", default=108, type=int)
+    parser.add_argument('-p', "--parts", action="store", default=10, type=int)
     parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
     parser.add_argument('-t', "--time", action="store", default=10, type=int)
-    parser.add_argument('-l', "--log", action="store", default=100, type=int)
+    parser.add_argument('-l', "--log", action="store", default=1000, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     args = parser.parse_args()
     comp = run_simulation(profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, log_freq=args.log, totaltime=args.time, optimizer=args.opt, thread_count=args.threads)
