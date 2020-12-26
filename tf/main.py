@@ -164,8 +164,8 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
         #tf.compat.v1.logging.info('PE:'+str(potentials/number_ljatom))
         avg_pe = potentials/(number_ljatom*log_freq) 
         avg_ke = kinetics/(number_ljatom*log_freq)
-        print(avg_pe)
-        print(avg_ke)
+        #print(avg_pe)
+        #print(avg_ke)
         tot_avg_ke+=avg_ke
         tot_avg_pe+=avg_pe
         save_energies(main_folder,avg_pe, avg_ke, x)
