@@ -134,7 +134,7 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
     writer = tf.compat.v1.summary.FileWriter(subfolder)
     writer.add_graph(sess.graph)
     comp_start = time.time()
-    #save(subfolder, 0, velocities, positions, forces)
+    save(subfolder, 0, velocities, positions, forces)
     for x in range(num_iterations):
         feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities, potentials_p:potentials, kinetics_p:kinetics}
         velocities, positions, forces, potentials, kinetics = sess.run([v_g, p_g, f_g, pe_g, ke_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
@@ -150,7 +150,7 @@ def run_simulation(totaltime=10, steps=10000, log_freq=1000, number_ljatom=108, 
             writer.add_run_metadata(run_metadata, 'step%d' % x)
             with open(os.path.join(subfolder, "{}-timeline.json".format((1+x)*log_freq)), 'w') as f:
                 f.write(ctf)
-        #save(subfolder, (1+x)*log_freq, velocities, positions, forces)
+        save(subfolder, (1+x)*log_freq, velocities, positions, forces)
         potentials = np.zeros((1), dtype=df_type)
         kinetics = np.zeros((1), dtype=df_type)
     cumm_avg_pe = tot_avg_pe/num_iterations
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', "--parts", action="store", default=64, type=int)
     parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
     parser.add_argument('-t', "--time", action="store", default=10, type=int)
-    parser.add_argument('-l', "--log", action="store", default=1, type=int)
+    parser.add_argument('-l', "--log", action="store", default=100, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     args = parser.parse_args()
     comp = run_simulation(profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, log_freq=args.log, totaltime=args.time, optimizer=args.opt, thread_count=args.threads)
