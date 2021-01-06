@@ -45,16 +45,6 @@ def velocity_verlet(curr_iter, vel, pos, force, edges_half, neg_edges_half, edge
         ke_graph = energies.kinetic_energy(vel_graph, ljatom_diameter_tf)
         return vel_graph, pos_graph, force_graph, pe_graph, ke_graph
 
-# @tf.function
-# def build_graph(vel_p, pos_p, force_p, edges_half, neg_edges_half, edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf,potentials_p, kinetics_p):
-#     with tf.name_scope("build_graph"):
-#         v_g, p_g, f_g = vel_p, pos_p, force_p
-#         pe_g, ke_g = potentials_p, kinetics_p #tf.constant(1, dtype=df_type) # placeholders so variable exists in scope for TF
-
-# #       for _ in tf.range(log_freq):
-#         v_g, p_g, f_g, pe_g, ke_g = run_one_iter(v_g, p_g, f_g, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf,pe_g, ke_g)
-#         return v_g, p_g, f_g, pe_g, ke_g
-
 def save_energies(filename, kinetics, potentials, ctr):
     with open(filename, "a+") as text_file:
         print_str = str(ctr)+"  "+str(kinetics)+"  "+str(potentials)+"    "+str(potentials+kinetics)
@@ -96,7 +86,7 @@ def run_simulation(subfolder, totaltime=10, steps=10000, number_ljatom=108, ljat
     tot_ke = 0.0
     curr_iter = 0
     samples = 1
-    hit_eqm = 4500
+    hit_eqm = 5000
     bx = by = bz = pow(number_ljatom/ljatom_density,1.0/3.0) # box edge lengths
     box = Box(bx, by, bz, df_type)
     positions, number_ljatom, masses, diameters = box.fill(number_ljatom, atom_diam=1)
@@ -120,10 +110,6 @@ def run_simulation(subfolder, totaltime=10, steps=10000, number_ljatom=108, ljat
         sess = tf.compat.v1.Session(config=config)
         sess.as_default()
     sess.run(tf.compat.v1.global_variables_initializer())
-
-
-    #v_g, p_g, f_g, pe_g, ke_g = build_graph(velocities_p, position_p, forces_p, edges_half, neg_edges_half,\
-    #     edges, delta_t, log_freq, forces_zeroes_tf, ljatom_mass_tf, ljatom_diameter_tf, potentials_p, kinetics_p)
     v_g, p_g, f_g, pe_g, ke_g = velocity_verlet(curr_iter, velocities_p, position_p, forces_p, edges_half, neg_edges_half, edges, delta_t, forces_zeroes_tf, ljatom_mass_tf, 
         ljatom_diameter_tf, potentials_p, kinetics_p)
     if profile:
@@ -134,38 +120,34 @@ def run_simulation(subfolder, totaltime=10, steps=10000, number_ljatom=108, ljat
         run_metadata = None
     writer = tf.compat.v1.summary.FileWriter(subfolder)
     writer.add_graph(sess.graph)
-    comp_start = time.time()
-    #save(subfolder, 0, velocities, positions, forces)
+    #comp_start = time.time()
     for curr_iter in range(steps):
         feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities, potentials_p:potentials, kinetics_p:kinetics}
         velocities, positions, forces, potentials, kinetics = sess.run([v_g, p_g, f_g, pe_g, ke_g], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
         avg_pe = potentials/number_ljatom 
         avg_ke = kinetics/number_ljatom
-        save_energies(os.path.join(subfolder, "energies-{}-{}.out".format(ljatom_density, number_ljatom)),avg_ke, avg_pe, curr_iter)
+        #save_energies(os.path.join(subfolder, "energies-{}-{}.out".format(ljatom_density, number_ljatom)),round(avg_ke,3), round(avg_pe,3), round(curr_iter,3))
         if(curr_iter>hit_eqm and curr_iter%log_freq==0):
             tot_ke+=kinetics
             tot_pe+=potentials
             samples += 1
 
-        if profile:
-            from tensorflow.python.client import timeline
-            tl = timeline.Timeline(run_metadata.step_stats)
-            ctf = tl.generate_chrome_trace_format()
-            writer.add_run_metadata(run_metadata, 'step%d' % curr_iter)
-            with open(os.path.join(subfolder, "{}-timeline.json".format((1+curr_iter)*log_freq)), 'w') as f:
-                f.write(ctf)
-        #save(subfolder, (1+x)*log_freq, velocities, positions, forces)
+        # if profile:
+        #     from tensorflow.python.client import timeline
+        #     tl = timeline.Timeline(run_metadata.step_stats)
+        #     ctf = tl.generate_chrome_trace_format()
+        #     writer.add_run_metadata(run_metadata, 'step%d' % curr_iter)
+        #     with open(os.path.join(subfolder, "{}-timeline.json".format((1+curr_iter)*log_freq)), 'w') as f:
+        #         f.write(ctf)
         potentials = np.zeros((1), dtype=df_type)
         kinetics = np.zeros((1), dtype=df_type)
     cumm_avg_pe = tot_pe/(samples*number_ljatom)
     cumm_avg_ke = tot_ke/(samples*number_ljatom)
     avg_temp = (2*cumm_avg_ke)/3
-    #print(cumm_avg_ke)
-    print(cumm_avg_pe)
-    #print("\n Average Kinetic Energy per particle is:", cumm_avg_ke)
-    print(avg_temp)
+
+    print(ljatom_density, ": ",round(cumm_avg_pe,2), " ", round(avg_temp,2))
     #meta_graph_def = tf.compat.v1.train.export_meta_graph(filename='./tf/outputs/my-model.meta')
-    exec_time = time.time() - comp_start
+    #exec_time = time.time() - comp_start
     return (cumm_avg_pe, avg_temp)
     
 if __name__ == "__main__":
@@ -175,10 +157,9 @@ if __name__ == "__main__":
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
     parser.add_argument('-g', "--generate", action="store", default=0, type=int)
-    #parser.add_argument('-g', "--generate", action="store", default=0, type=int)
     parser.add_argument('-p', "--parts", action="store", default=500, type=int)
-    parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
-    parser.add_argument('-t', "--time", action="store", default=10, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=70000, type=int)
+    parser.add_argument('-t', "--time", action="store", default=70, type=int)
     parser.add_argument('-d', "--density", action="store", default=0.1, type=float)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     args = parser.parse_args()
@@ -191,14 +172,14 @@ if __name__ == "__main__":
         shutil.rmtree(subfolder)
     os.mkdir(subfolder)
     if args.generate:
-        num_records = 20
-        rho = args.density
-        for i in range(0,num_records):
+        densities = np.arange(0.1, 0.95, 0.01)
+        for rho in densities: 
+            rho = round(rho,3)
             (potential_energy, temp) = run_simulation(subfolder, profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, ljatom_density=rho, totaltime=args.time, optimizer=args.opt, thread_count=args.threads) 
-            with open(os.path.join(subfolder, "data_dump-{}-{}.out".format(args.parts,num_records)), 'a') as f:
+            with open(os.path.join(subfolder, "data_dump-{}-{}.out".format(args.parts,args.steps)), 'a') as f:
                 f.write("\n"+str(rho)+"\t"+str(potential_energy)+"\t"+str(temp))
-            rho += 1/num_records
+            
     else:
         (potential_energy, temp) = run_simulation(subfolder, profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, ljatom_density=args.density, totaltime=args.time, optimizer=args.opt, thread_count=args.threads)
     
-    #print(comp)
+    
