@@ -41,12 +41,12 @@ Status of tasks enlisted above:
 1. The energy calculations were fixed and verified in the current tensorflow code. Everything works similar to C++ code. 
 2. Data for surrogate has been generated. The behavioral convergence was identified at 80000 steps. To round off, data was prepared with 100000 steps. All the parameters including input, output and neural were defined for the model. Some of the important ones were: 
 
-## Input Params:
+### Input Params:
 Density from 0.1 to 0.95
-## Output Params:
+### Output Params:
 Average Potential Energy per particle
 Average Temperature per particle
-## Neutral Parameters:
+### Neutral Parameters:
 Number of steps = 100000
 Equilibrium hit = 5000 steps
 Number of particles = 500
