@@ -35,3 +35,27 @@ I have three routes to get to the energy values:
 3. Get the tensor wriiten to a file.
 
 I spent half a day on the 3rd route. Maybe I should explore the other two to get a pace on getting to the energy conservation code.
+
+# 01-06
+Status of tasks enlisted above: 
+1. The energy calculations were fixed and verified in the current tensorflow code. Everything works similar to C++ code. 
+2. Data for surrogate has been generated. The behavioral convergence was identified at 80000 steps. To round off, data was prepared with 100000 steps. All the parameters including input, output and neural were defined for the model. Some of the important ones were: 
+
+### Input Params:
+Density from 0.1 to 0.95
+### Output Params:
+Average Potential Energy per particle
+Average Temperature per particle
+### Neutral Parameters:
+Number of steps = 100000
+Equilibrium hit = 5000 steps
+Number of particles = 500
+Total time = 100s
+log_freq = 100
+
+3. The model implementation is in Progress. I have a model with one hidden layer. The is one input and 2 outputs for the Neural network. The hidden layer has 2 neurons for now. I am still working on fine tuning it. The learning rate is set at 0.001 with adam optimizer. I am working on setting the right number of epochs for minimum loss and max accuracy. The data is divided into three sets : training(54 samples), validation(14 samples) and test(18 samples).
+
+4. Integration strategy needs to be discussed with Vikram and Prateek. 
+
+5. I have started looking at the nano code in parallel. 
+
