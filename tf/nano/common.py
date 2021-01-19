@@ -13,6 +13,8 @@ def wrap_distances_on_edges(simul_box, distances):
         edges_half = tf.constant([simul_box.lx/2, simul_box.ly/2, 0], name="box_edges_half", dtype=tf_dtype)
         neg_edges_half = tf.constant([-simul_box.lx/2, -simul_box.ly/2, 0], name="neg_box_edges_half", dtype=tf_dtype)
         wrapped_distances = tf.compat.v1.where_v2(distances > edges_half, distances - edges, distances, name="where_edges_half")
+        # print("\n Printing wrapped distances::")
+        # out_wrap_distances = tf.Print(wrapped_distances, [wrapped_distances[0]])
         return tf.compat.v1.where_v2(wrapped_distances < neg_edges_half, wrapped_distances + edges, wrapped_distances, name="where_neg_edges_half")
 
 def magnitude(tensor, axis:int=2, keepdims:bool=False):

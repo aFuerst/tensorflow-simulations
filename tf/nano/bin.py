@@ -18,10 +18,10 @@ def make_bins(box, set_bin_width):
 
 def tf_get_ion_bin_density(box, ion_dict):
     charge_filter = tf.math.greater(ion_dict[interface.ion_charges_str], 0)
-    neg_charge_filter =  tf.math.logical_not(charge_filter)
+    neg_charge_filter = tf.math.logical_not(charge_filter)
     z_pos = ion_dict[interface.ion_pos_str][:, -1]  # get z-axis value
     bin_nums = tf.dtypes.cast(z_pos + (0.5*box.lz) / bin_width, tf.int32)
-
+    # out_bin_nums = tf.Print(bin_nums, [bin_nums[0:3]], " bin_ion_density")
     pos_bin_count = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, charge_filter), minlength=number_of_bins, maxlength=number_of_bins, dtype=common.tf_dtype) / bin_volume
     neg_bin_count = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, neg_charge_filter), minlength=number_of_bins, maxlength=number_of_bins, dtype=common.tf_dtype) / bin_volume
     return pos_bin_count, neg_bin_count

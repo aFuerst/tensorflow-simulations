@@ -4,6 +4,7 @@ from box import Box
 import energies, forces
 import tensorflow_manip
 import time, argparse, shutil, math, sys, os
+import statistics
 
 
 
@@ -36,13 +37,13 @@ def velocity_verlet(curr_iter, vel, pos, force, edges_half, neg_edges_half, edge
         if(curr_iter==0):
             force = forces.lj_force(pos, edges_half, neg_edges_half, edges, forces_zeroes_tf, ljatom_diameter_tf)
             pe_graph = energies.potential_energy(pos, edges_half, neg_edges_half, edges, ljatom_diameter_tf)
-            ke_graph = energies.kinetic_energy(vel, ljatom_diameter_tf)
+            ke_graph = energies.kinetic_energy(vel, ljatom_mass_tf)
         vel_graph = update_vel(vel, force, delta_t, ljatom_mass_tf)
         pos_graph = update_pos(pos, vel_graph, edges_half, neg_edges_half, edges, delta_t)
         force_graph = forces.lj_force(pos_graph, edges_half, neg_edges_half, edges, forces_zeroes_tf, ljatom_diameter_tf)
         pe_graph = energies.potential_energy(pos_graph, edges_half, neg_edges_half, edges, ljatom_diameter_tf)
         vel_graph = update_vel(vel_graph, force_graph, delta_t, ljatom_mass_tf)
-        ke_graph = energies.kinetic_energy(vel_graph, ljatom_diameter_tf)
+        ke_graph = energies.kinetic_energy(vel_graph, ljatom_mass_tf)
         return vel_graph, pos_graph, force_graph, pe_graph, ke_graph
 
 def save_energies(filename, kinetics, potentials, ctr):
@@ -84,6 +85,8 @@ def run_simulation(subfolder, totaltime=10, steps=10000, number_ljatom=108, ljat
     delta_t = totaltime / steps
     tot_pe = 0.0
     tot_ke = 0.0
+    avg_ke_arr = []
+    avg_pe_arr = []
     curr_iter = 0
     samples = 1
     hit_eqm = 5000
@@ -118,8 +121,8 @@ def run_simulation(subfolder, totaltime=10, steps=10000, number_ljatom=108, ljat
     else:
         run_options = None
         run_metadata = None
-    writer = tf.compat.v1.summary.FileWriter(subfolder)
-    writer.add_graph(sess.graph)
+    # writer = tf.compat.v1.summary.FileWriter(subfolder)
+    # writer.add_graph(sess.graph)
     #comp_start = time.time()
     for curr_iter in range(steps):
         feed_dict = {position_p:positions, forces_p:forces, velocities_p:velocities, potentials_p:potentials, kinetics_p:kinetics}
@@ -128,6 +131,8 @@ def run_simulation(subfolder, totaltime=10, steps=10000, number_ljatom=108, ljat
         avg_ke = kinetics/number_ljatom
         #save_energies(os.path.join(subfolder, "energies-{}-{}.out".format(ljatom_density, number_ljatom)),round(avg_ke,3), round(avg_pe,3), round(curr_iter,3))
         if(curr_iter>hit_eqm and curr_iter%log_freq==0):
+            avg_ke_arr.append(avg_ke)
+            avg_pe_arr.append(avg_pe)
             tot_ke+=kinetics
             tot_pe+=potentials
             samples += 1
@@ -141,14 +146,18 @@ def run_simulation(subfolder, totaltime=10, steps=10000, number_ljatom=108, ljat
         #         f.write(ctf)
         potentials = np.zeros((1), dtype=df_type)
         kinetics = np.zeros((1), dtype=df_type)
+    
+    pe_stdev = statistics.stdev(avg_ke_arr)
+    ke_stdev = statistics.stdev(avg_pe_arr)
+    temp_stdev = statistics.stdev(map(lambda x:2*x/3,avg_ke_arr))
     cumm_avg_pe = tot_pe/(samples*number_ljatom)
     cumm_avg_ke = tot_ke/(samples*number_ljatom)
     avg_temp = (2*cumm_avg_ke)/3
 
-    print(ljatom_density, ": ",round(cumm_avg_pe,2), " ", round(avg_temp,2))
+    print(ljatom_density, " ",round(cumm_avg_pe,3), " ", round(avg_temp,3)," ",round(pe_stdev,3)," ", round(temp_stdev,3))
     #meta_graph_def = tf.compat.v1.train.export_meta_graph(filename='./tf/outputs/my-model.meta')
     #exec_time = time.time() - comp_start
-    return (cumm_avg_pe, avg_temp)
+    return (cumm_avg_pe, avg_temp, pe_stdev, temp_stdev)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -157,29 +166,30 @@ if __name__ == "__main__":
     parser.add_argument('-r', "--prof", action="store_true")
     parser.add_argument('-o', "--opt", action="store_true")
     parser.add_argument('-g', "--generate", action="store", default=0, type=int)
-    parser.add_argument('-p', "--parts", action="store", default=500, type=int)
-    parser.add_argument('-s', "--steps", action="store", default=70000, type=int)
-    parser.add_argument('-t', "--time", action="store", default=70, type=int)
+    parser.add_argument('-p', "--parts", action="store", default=108, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=10000, type=int)
+    parser.add_argument('-t', "--time", action="store", default=10, type=int)
     parser.add_argument('-d', "--density", action="store", default=0.1, type=float)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     args = parser.parse_args()
     
-    main_folder = "./outputs"
-    if not os.path.exists(main_folder):
-        os.mkdir(main_folder)
-    subfolder = os.path.join(main_folder, "output-{}-{}-{}-{}".format(args.threads, args.time, args.steps, args.parts))
-    if os.path.exists(subfolder):
-        shutil.rmtree(subfolder)
-    os.mkdir(subfolder)
+    # main_folder = "./outputs"
+    # if not os.path.exists(main_folder):
+    #     os.mkdir(main_folder)
+    # subfolder = os.path.join(main_folder, "output-{}-{}-{}-{}".format(args.threads, args.time, args.steps, args.parts))
+    # if os.path.exists(subfolder):
+    #     shutil.rmtree(subfolder)
+    # os.mkdir(subfolder)
+    subfolder = ''
     if args.generate:
-        densities = np.arange(0.1, 0.95, 0.01)
+        densities = np.arange(args.density, 0.95, 0.01)
         for rho in densities: 
             rho = round(rho,3)
-            (potential_energy, temp) = run_simulation(subfolder, profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, ljatom_density=rho, totaltime=args.time, optimizer=args.opt, thread_count=args.threads) 
-            with open(os.path.join(subfolder, "data_dump-{}-{}.out".format(args.parts,args.steps)), 'a') as f:
-                f.write("\n"+str(rho)+"\t"+str(potential_energy)+"\t"+str(temp))
+            (potential_energy, temp, pe_stdev, temp_stdev) = run_simulation(subfolder, profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, ljatom_density=rho, totaltime=args.time, optimizer=args.opt, thread_count=args.threads) 
+            # with open(os.path.join(subfolder, "data_dump-{}-{}.out".format(args.parts,args.steps)), 'a') as f:
+            #     f.write("\n"+str(rho)+"\t"+str(potential_energy)+"\t"+str(temp)+"\t"+str(pe_stdev)+"\t"+str(temp_stdev))
             
     else:
-        (potential_energy, temp) = run_simulation(subfolder, profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, ljatom_density=args.density, totaltime=args.time, optimizer=args.opt, thread_count=args.threads)
+        (potential_energy, temp, pe_stdev, temp_stdev) = run_simulation(subfolder, profile=args.prof, xla=args.xla, force_cpu=args.cpu, number_ljatom=args.parts, steps=args.steps, ljatom_density=args.density, totaltime=args.time, optimizer=args.opt, thread_count=args.threads)
     
     

@@ -11,7 +11,8 @@ ion_masses_str = "ion_masses"
 ion_epsilon_str = "ion_epsilon"
 
 class Interface:
-    def __init__(self, salt_conc_in: float, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=80, initial_eout: float=80):
+    #def __init__(self, salt_conc_in: float, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=80, initial_eout: float=80):
+    def __init__(self, salt_conc_in, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=80, initial_eout: float=80):
         self.salt_conc_in = salt_conc_in
         self.salt_conc_out = salt_conc_out
         self.salt_valency_in = salt_valency_in
@@ -149,7 +150,7 @@ class Interface:
                                 ion_masses.append(1.0)
                                 ion_epsilon.append(self.ein)
                             ion_pos.append(posvec)
-
+        # print("\n Positions: put_salt_ions_inside:",ion_pos)   values verified with C++ code
         return {ion_pos_str:conv(ion_pos), ion_charges_str:conv(ion_charges),\
                  ion_masses_str:conv(ion_masses), ion_diameters_str:conv(ion_diameter), ion_epsilon_str:conv(ion_epsilon)}
         

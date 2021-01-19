@@ -10,6 +10,7 @@ def kinetic_energy(vel, ljatom_diameter_tf):
     with tf.name_scope("kinetic_energy"):
         m = tf.norm(vel,ord='euclidean', axis=1, keepdims=True)
         magnitude = m #common.magnitude(distances)
+        #out = tf.Print(ljatom_diameter_tf,[ljatom_diameter_tf])
         ke = tf.math.reduce_sum((0.5 * ljatom_diameter_tf * magnitude * magnitude),name="ke_energy_reduce_sum")
         return ke
 

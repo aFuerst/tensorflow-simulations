@@ -7,8 +7,10 @@ import utility, bin, forces, thermostat, velocities, particle, interface, energi
 ke_placeholder = tf.compat.v1.placeholder(shape=(), dtype=common.tf_dtype, name="kinetic_energy_place")
 
 def clean():
-    shutil.rmtree("./output/")
-    os.mkdir("./output/")
+    if os.path.exists("./output/"):
+        shutil.rmtree("./output/")
+    if not os.path.exists("./output/"):
+        os.mkdir("./output/")
 
 def save(i, ion_dict, therms_dict, kinetic_energy, expfac_real):
     path="./output/"
@@ -28,12 +30,14 @@ def save(i, ion_dict, therms_dict, kinetic_energy, expfac_real):
 def build_graph(simul_box, thermostats, ion_dict, dt:float, sample_iter):
     # TODO: get working with tf.function => faster graph execution with or without?
     ke_g = ke_placeholder
-    for i in range(sample_iter):
+    for i in range(5):
         thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_g)
         thermostats = thermostat.update_eta(thermostats, dt)
         expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
         ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
         ion_dict = particle.update_position(simul_box, ion_dict, dt)
+        out_pos = tf.Print(ion_dict.get(interface.ion_pos_str), [ion_dict.get(interface.ion_pos_str)], " positions in build_graph")
+        print("\n\n Positions: update_position :: ion_dict[interface.ion_pos_str] = ", out_pos)
         ion_dict = forces.for_md_calculate_force(simul_box, ion_dict)
         ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
 
@@ -43,8 +47,9 @@ def build_graph(simul_box, thermostats, ion_dict, dt:float, sample_iter):
     return thermostats, ion_dict, bin.tf_get_ion_bin_density(simul_box, ion_dict), ke_g, expfac_real_g
 
 def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke):
-    print("placeholders\n", tf_ion_place, "\n", thermos_place)
-    print("graph\n", thermo_g, "\n", ion_g, "\n", bin_density_g, "\n", ke_g, "\n", expfac_real_g)
+    # print(" filler")
+    # print("placeholders : loop\n", tf_ion_place, "\n", thermos_place)
+    # print("graph : loop\n", thermo_g, "\n", ion_g, "\n", bin_density_g, "\n", ke_g, "\n", expfac_real_g)
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
     ion_feed = common.create_feed_dict((ion_dict, tf_ion_place))
@@ -58,9 +63,10 @@ def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, ther
             [thermo_g, ion_g, bin_density_g, ke_g, expfac_real_g], feed_dict=feed)
         ion_feed = common.create_feed_dict((ion_dict_out, tf_ion_place))
         ft = thermostat.therms_to_feed_dict(therms_out, thermos_place)
-        save(i, ion_dict_out, therms_out, ke_v, expfac_real_v)
+        # save(i, ion_dict_out, therms_out, ke_v, expfac_real_v)
         positions = ion_dict_out[interface.ion_pos_str]
         if mdremote.validate:
+            print("\n Entered Validation:::")
             common.throw_if_bad_boundaries(ion_dict_out[interface.ion_pos_str], simul_box)
             if (2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)) > 2:
                 raise Exception("Temperature too high! was '{}'".format(2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)))
@@ -83,13 +89,17 @@ def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint: float, valenc
     a = time.time()
     thermostats_g, ion_dict_g, bin_density_g, ke_g, expfac_real_g = build_graph(
         simul_box, thermos_place, tf_ion_place, mdremote.timestep, mdremote.freq)
+    # out_pos = tf.Print(ion_dict_g[interface.ion_pos_str],[ion_dict_g[interface.ion_pos_str][0:7]])
+    # print("\n Positions: after build_graph:", out_pos)
     print("graph (s)", time.time() - a)
     tot = time.time()    
     sess.run(tf.compat.v1.global_variables_initializer())
+    # sess.run(thermostats_g, ion_dict_g, bin_density_g, ke_g, expfac_real_g)
     print("var init (s)", time.time()-tot)
     d = time.time()
     loop(simul_box, thermostats_g, ion_dict_g, bin_density_g, ion_dict,
          ion_place_copy, thermostats, thermo_place_copy, sess, mdremote, ke_g, expfac_real_g, initial_ke)
+    # print("\n Positions: after build_graph:", ion_dict_g[interface.ion_pos_str])
     f = time.time()
     print("total run (s)", f-d)
     print("time/step", (f-d)/(mdremote.steps*mdremote.freq))

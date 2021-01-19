@@ -44,20 +44,7 @@ class Box:
                             self._diameters = np.concatenate([self._diameters, [[atom_diam]]], axis=0)
         if self._atoms.shape[0] < num_atoms:
             print("WARNING: Unable to fit in {0} atoms, could only place {1}".format(num_atoms, self._atoms.shape[0]), file=sys.stderr)  #stop here
-        # print("atoms coordinates are:",self._atoms[0:100])
-        # print(self._atoms[100:200])
-        # print(self._atoms[200:300])
-        # print(self._atoms[300:344])
         return self._atoms, self._atoms.shape[0], self._masses, self._diameters
 
     def get_edges_as_tf(self):
         return tf.constant(np.array([self._x, self._y, self._z]), name="edges", dtype=self._df_type)
-
-# if __name__ == "__main__":
-#     size = 2.51939*2
-#     b = Box(size,size,size)
-#     atoms = b.fill(5, 1)
-#     print(atoms.shape)
-#     b = Box(size,size,size)
-#     atoms = b.fill(500, 1)
-#     print(atoms.shape)
