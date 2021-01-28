@@ -22,6 +22,7 @@ def initialize_particle_velocities(ion_dict, thermostats):
         avg_vel = avg_vel * (1/len(ion_dict[interface.ion_pos_str]))
 
         ion_dict[ion_vel_str] = random_vels-avg_vel
+        ion_dict[ion_vel_str] = np.zeros(ion_dict[interface.ion_pos_str].shape, dtype=common.np_dtype)
         print("avg_vel", np.average(ion_dict[ion_vel_str], axis=0))
         print("abs avg_vel", np.average(np.absolute(ion_dict[ion_vel_str]), axis=0))
         print("ke", energies.np_kinetic_energy(ion_dict))
@@ -32,5 +33,6 @@ def update_velocity(ion_dict, dt: float, expfac):
     update velocities, expfac should be a TF variable
     """
     with tf.name_scope("update_velocity"):
+        expfac = tf.math.round(expfac)
         ion_dict[ion_vel_str] = (ion_dict[ion_vel_str] * expfac) + (ion_dict[interface.ion_for_str] * (0.5 * dt * tf.math.sqrt(expfac)))
         return ion_dict

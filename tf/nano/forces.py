@@ -25,53 +25,91 @@ def _particle_electrostatic_force(simul_box, ion_dict):
     parallel calculation of forces (uniform case)
     """
     with tf.name_scope("particle_electrostatic_force"):
-        distances = common.wrap_vectorize(fn=lambda atom_pos: ion_dict[interface.ion_pos_str] - atom_pos, elems=ion_dict[interface.ion_pos_str])
+        distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - ion_dict[interface.ion_pos_str], elems=ion_dict[interface.ion_pos_str])
         z_distances = distances[:, :, -1] # get z-axis value #TODO: Remove the need for third axis/pulling out z dimension => see if faster way
         abs_z_distances = tf.math.abs(z_distances)
         r1 = tf.math.sqrt(0.5 + ((z_distances / simul_box.lx) * (z_distances / simul_box.lx)))
         r2 = tf.math.sqrt(0.25 + ((z_distances / simul_box.lx) * (z_distances / simul_box.lx)))
         E_z = 4 * tf.math.atan(4 * abs_z_distances * r1 / simul_box.lx)
-
+        condition = tf.equal(z_distances, 0)
+        r1 = tf.compat.v1.where_v2(condition, z_distances, r1, name="r1_cleanup")
+        r2 = tf.compat.v1.where_v2(condition, z_distances, r2, name="r2_cleanup")
         factor = tf.compat.v1.where_v2(z_distances >= 0.0, _tf_one, _tf_neg_one, name="where_factor")
-        #print("\nr1:",r1)
-        #print("\nE_z:",E_z)
 
-        #print("\nz_distances:",z_distances)
         #THIS HCSH MIGHT BE INCORRECT HENCE (3,3,3) IS CAUSING A TROUBLE
         hcsh = (4 / simul_box.lx) * (1 / (r1 * (0.5 + r1)) - 1 / (r2 * r2)) * z_distances + factor * E_z + \
                        16 * abs_z_distances * (simul_box.lx / (simul_box.lx * simul_box.lx + 16 * z_distances * z_distances * r1 * r1)) * \
-                       (abs_z_distances * z_distances / (simul_box.lx * simul_box.lx * r1) + factor * r1) # MATHEMATICAL
-        #print("hcsh.shape", hcsh)
-        #h1.z = h1.z + 2 * ion[i].q * (ion[j].q / (box.lx * box.lx)) * 0.5 * (1 / ion[i].epsilon + 1 / ion[j].epsilon) * hcsh
+                       (abs_z_distances * z_distances / (simul_box.lx * simul_box.lx * r1) + factor * r1)
+        hcsh = _zero_nans(hcsh)
         one_over_ep = 1 / ion_dict[interface.ion_epsilon_str]
         q_over_lx_sq = ion_dict[interface.ion_charges_str] / (simul_box.lx * simul_box.lx)
-        vec_one_over_ep = common.wrap_vectorize(fn=lambda epsilon_j: one_over_ep + epsilon_j, elems=one_over_ep)
-        #print("vec_one_over_ep:",vec_one_over_ep)
-        vec_q_over_lx_sq = common.wrap_vectorize(fn=lambda q_j: ion_dict[interface.ion_charges_str] * q_j, elems=q_over_lx_sq)
-        #print("vec_q_over_lx_sq.shape", vec_q_over_lx_sq)
+        vec_one_over_ep = common.wrap_vectorize(fn=lambda epsilon_j: epsilon_j + one_over_ep, elems=one_over_ep)
+
+        vec_q_over_lx_sq = common.wrap_vectorize(fn=lambda q_j: q_j * ion_dict[interface.ion_charges_str], elems=q_over_lx_sq)
         h1_z = 2 * vec_q_over_lx_sq * 0.5 * vec_one_over_ep * hcsh
         h1_z = tf.math.reduce_sum(h1_z, axis=1, keepdims=True)
-        # print("h1_z.shape", h1_z.shape)
-        # h1 =h1+ ((temp_vec ^ ((-1.0) / r3)) ^ ((-0.5) * ion[i].q * ion[j].q * (1 / ion[i].epsilon + 1 / ion[j].epsilon)));
+
         wrapped_distances = common.wrap_distances_on_edges(simul_box, distances)
-        r = common.magnitude(wrapped_distances, keepdims=True) # keep third dimension to divide third dim in wrapped_distances later
+        r = tf.norm(wrapped_distances, ord='euclidean', axis=2, keepdims=True)
         r3 = tf.math.pow(r, 3)
 
-        vec_q_mul = common.wrap_vectorize(fn=lambda q_j: ion_dict[interface.ion_charges_str] * q_j, elems=ion_dict[interface.ion_charges_str])
+        vec_q_mul = common.wrap_vectorize(fn=lambda q_j: q_j * ion_dict[interface.ion_charges_str] , elems=ion_dict[interface.ion_charges_str])
         a = _zero_nans(wrapped_distances * ((-1.0) / r3)) # r3 can have zeroes in it, so remove the nans that come from div by zero
         b = ((-0.5) * vec_q_mul * vec_one_over_ep)
-        # print("a.shape", a.shape)
-        # print("b.shape", b.shape)
-        # print("a * b[:,:,tf.newaxis].shape", (a * b[:,:,tf.newaxis]).shape)
-        h1 = tf.math.reduce_sum(a * b[:,:,tf.newaxis], axis=1, keepdims=False, name="sum_a_times_b") #TODO: remove need for newaxis here
-        # print("h1.shape", h1.shape)
+        h1 = tf.math.reduce_sum(a * b[:,:,tf.newaxis], axis=1, keepdims=False, name="sum_a_times_b") #TODO: remove need for newaxis here  #-------------->>>>> change axis here to 0
         h1_x_y = h1[:,0:2] #TODO: replace this junk with better impl
         c = h1[:,2:3] + h1_z
         con = tf.concat(values=[h1_x_y, c], axis=1, name="x_y_and_c_concatenate")
-        #print("\n utility.scalefactor:",utility.scalefactor)
-        #print("\n con:",con)
         return con * utility.scalefactor
         # return con * utility.scalefactor, distances, h1, h1_z, hcsh, a, b
+
+
+def _electrostatic_wall_force(simul_box, ion_dict, wall_dictionary):
+    """
+    ion interacting via electrostatic force with discrete planar wall
+    """
+    with tf.name_scope("electrostatic_wall_force"):
+        wall_distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - wall_dictionary["posvec"],
+                                               elems=ion_dict[interface.ion_pos_str])
+        wall_z_dist = wall_distances[:, :, -1]  # get z-axis value
+        factor = tf.compat.v1.where_v2(wall_z_dist >= 0.0, _tf_one, _tf_neg_one, name="where_factor")
+        r1_rightwall = tf.math.sqrt(0.5 + (wall_z_dist / simul_box.lx) * (wall_z_dist / simul_box.lx))
+        r2_rightwall = tf.math.sqrt(0.25 + (wall_z_dist / simul_box.lx) * (wall_z_dist / simul_box.lx))
+
+        # condition = tf.equal(wall_z_dist, 0)
+        # r1_rightwall = tf.compat.v1.where_v2(condition, wall_z_dist, r1_rightwall, name="r1_cleanup")
+        # r2_rightwall = tf.compat.v1.where_v2(condition, wall_z_dist, r2_rightwall, name="r2_cleanup")
+
+
+        E_z_rightwall = 4 * tf.math.atan(4 * tf.math.abs(wall_z_dist) * r1_rightwall / simul_box.lx)
+        hcsh_rightwall = (4 / simul_box.lx) * (1 / (r1_rightwall * (0.5 + r1_rightwall)) - 1 / (r2_rightwall * r2_rightwall)) * wall_z_dist + factor * E_z_rightwall + 16 * tf.math.abs(wall_z_dist) * (simul_box.lx / (
+                    simul_box.lx * simul_box.lx + 16 * wall_z_dist * wall_z_dist * r1_rightwall * r1_rightwall)) * (tf.math.abs(wall_z_dist) * wall_z_dist / (simul_box.lx * simul_box.lx * r1_rightwall) + factor * r1_rightwall)
+
+        # h1_rightwall.z = h1_rightwall.z + 2 * ion[i].q * (wall_dummy.q / (box.lx * box.lx)) * 0.5 * (1 / ion[i].epsilon + 1 / wall_dummy.epsilon) * hcsh_rightwall;
+        ion_one_over_ep = 1 / ion_dict[interface.ion_epsilon_str]  # 1 / ion[i].epsilon
+        wall_one_over_ep = 1 / wall_dictionary["epsilon"]  # 1 / wall_dummy.epsilon
+        q_over_lx_sq = wall_dictionary["q"] / (simul_box.lx * simul_box.lx)  # (wall_dummy.q / (box.lx * box.lx))
+        vec_one_over_ep = common.wrap_vectorize(fn=lambda ion_eps: wall_one_over_ep + ion_eps, elems=ion_one_over_ep)  # (1 / ion[i].epsilon + 1 / wall_dummy.epsilon)
+        vec_q_over_lx_sq = common.wrap_vectorize(fn=lambda q_j: q_j * q_over_lx_sq, elems=ion_dict[interface.ion_charges_str])  # ion[i].q * (wall_dummy.q / (box.lx * box.lx))
+
+        h1_z = 2 * vec_q_over_lx_sq * 0.5 * (vec_one_over_ep) * hcsh_rightwall
+        h1_z = tf.math.reduce_sum(h1_z, axis=1, keepdims=True, name="sum_h1_z")
+
+        # h1_rightwall = h1_rightwall+ ((temp_vec_rightwall ^ ((-1.0) / r3_rightwall)) ^ ((-0.5) * ion[i].q * wall_dummy.q * (1 / ion[i].epsilon + 1 / wall_dummy.epsilon)));
+        wrapped_distances = common.wrap_distances_on_edges(simul_box, wall_distances)
+        r = common.magnitude(wrapped_distances, keepdims=True)  # keep third dimension to divide third dim in wrapped_distances later
+        # r = tf.norm(wrapped_distances, ord='euclidean', axis=2, keepdims=True)
+        r3 = tf.math.pow(r, 3.0, name="r_3")
+
+        vec_q_mul = common.wrap_vectorize(fn=lambda q_j: wall_dictionary["q"] * q_j,elems=ion_dict[interface.ion_charges_str])
+        a = _zero_nans(wrapped_distances * ((-1.0) / r3)) * ((-0.5) * vec_q_mul * vec_one_over_ep)[:, :, tf.newaxis]
+        h1 = tf.math.reduce_sum(a, axis=1, keepdims=False, name="sum_a_mul_b")
+        z = h1[:, 2:3] + h1_z
+        con = tf.concat(values=[h1[:, 0:2], z], axis=1, name="h1x_y_and_h1_z_concatenate")
+        # print("\n _electrostatic_wall_force :: utility.scalefactor",utility.scalefactor)
+        # print("\n _electrostatic_wall_force :: con",con)
+        return con * utility.scalefactor
+
 
 def _particle_lj_force(simul_box, ion_dict):
     """
@@ -79,11 +117,16 @@ def _particle_lj_force(simul_box, ion_dict):
     ion-ion
     """
     with tf.name_scope("particle_lj_force"):
-        distances = common.wrap_vectorize(fn=lambda atom_pos: ion_dict[interface.ion_pos_str] - atom_pos, elems=ion_dict[interface.ion_pos_str])
+        distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - ion_dict[interface.ion_pos_str] , elems=ion_dict[interface.ion_pos_str])
         d = common.wrap_vectorize(fn=lambda atom_diam: ion_dict[interface.ion_diameters_str] + atom_diam, elems=ion_dict[interface.ion_diameters_str]) * 0.5
         d = d[:,:,tf.newaxis] # add third dimension to match with wrapped_distances and r2 later
         wrapped_distances = common.wrap_distances_on_edges(simul_box, distances)
-        r2 = common.magnitude_squared(wrapped_distances, axis=2, keepdims=True) # keep third dimension to match with wrapped_distances
+        r2 = common.magnitude_squared(wrapped_distances, axis=2, keepdims=True)  # keep third dimension to match with wrapped_distances
+        condition = tf.equal(r2, 0)
+        d = tf.compat.v1.where_v2(condition, r2, d, name="d_cleanup")
+        condition = tf.equal(distances, 0)
+        wrapped_distances = tf.compat.v1.where_v2(condition, distances, wrapped_distances, name="wrapped_distances_cleanup")
+
         d_2 = tf.math.pow(d, 2.0, name="square_diam_diff")
         # d_6 = tf.math.pow(d, 6.0, name="diam_6_pow") / tf.math.pow(r2, 3.0, name="mag_6_pow") # magnitude is alread "squared" so only need N/2 power
         # d_12 = tf.math.pow(d, 12.0, name="diam_12_pow") / tf.math.pow(r2, 6.0, name="mag_12_pow")
@@ -112,17 +155,17 @@ def _left_wall_lj_force(simul_box, ion_dict):
     """
     with tf.name_scope("left_wall_lj_force"):
         # if (ion[i].posvec.z > 0.5 * box.lz - ion[i].diameter)
-        mask = ion_dict[interface.ion_pos_str][:, -1] < ((-0.5 * simul_box.lz) - ion_dict[interface.ion_diameters_str]) #TODO: remove this mask if not cause of sim error
+        mask = ion_dict[interface.ion_pos_str][:, -1] < ((-0.5 * simul_box.lz) + ion_dict[interface.ion_diameters_str]) #TODO: remove this mask if not cause of sim error
         dummy_mult = tf.constant([1, 1, 0], name="dummy_mult_left", dtype=common.tf_dtype)
         dummy_pos = ion_dict[interface.ion_pos_str] * dummy_mult
         #TODO!: replace - 0.5 with 0.5* diameter for correctness
-        dummy_add = tf.constant([0, 0, (-0.5 * simul_box.lz) -0.5], name="dummy_add_left", dtype=common.tf_dtype)
+        # dummy_add = tf.constant([0, 0, (-0.5 * simul_box.lz) -0.5], name="dummy_add_left", dtype=common.tf_dtype)
+        dummy_add = tf.constant([0, 0, (-0.5 * simul_box.lz)], name="dummy_add_left", dtype=common.tf_dtype)
         dummy_pos = dummy_pos + dummy_add
         distances = ion_dict[interface.ion_pos_str] - dummy_pos
         r2 = common.magnitude_squared(distances, axis=1, keepdims=True)  # keep 1th dimension to match up with distances later
         #  + ion_dict[interface.ion_diameters_str] * 0.5
-        diam_2 = tf.math.pow((ion_dict[interface.ion_diameters_str] + ion_dict[interface.ion_diameters_str])
-                             * 0.5, 2.0, name="diam_2_pow")[:, tf.newaxis]  # add new dimension to match up with distances later
+        diam_2 = tf.math.pow(ion_dict[interface.ion_diameters_str] * 0.5, 2.0, name="diam_2_pow")[:, tf.newaxis]  # add new dimension to match up with distances later
 
         # d6 = tf.math.pow(diam_2, 3.0, name="diam_6_pow")
         # r6 = tf.math.pow(r2, 3.0, name="r_6_pow")
@@ -133,10 +176,8 @@ def _left_wall_lj_force(simul_box, ion_dict):
 
         d_r_6 = tf.math.pow(diam_2, 3.0, name="diam_6_pow") / tf.math.pow(r2, 3.0, name="r_6_pow") # magnitude is alread "squared" so only need N/2 power
         d_r_12 = tf.math.pow(diam_2, 6.0, name="diam_12_pow") / tf.math.pow(r2, 6.0, name="r_12_pow")
-        slice_forces = distances * \
-            (48.0 * utility.elj * (d_r_12 - 0.5 * d_r_6) * (1.0 / r2))
-        d_cut = tf.compat.v1.where_v2(
-            r2 < (diam_2 * utility.dcut2), slice_forces, _tf_zero, name="where_d_cut")
+        slice_forces = distances * (48.0 * utility.elj * (d_r_12 - 0.5 * d_r_6) * (1.0 / r2))
+        d_cut = tf.compat.v1.where_v2(r2 < (diam_2 * utility.dcut2), slice_forces, _tf_zero, name="where_d_cut")
         # return d_cut
         return tf.compat.v1.where_v2(mask[:, tf.newaxis], d_cut, _tf_zero, name="lj_wall_bulk_cutoff")
 
@@ -150,14 +191,13 @@ def _right_wall_lj_force(simul_box, ion_dict):
         dummy_mult = tf.constant([1, 1, 0], name="dummy_mult_right", dtype=common.tf_dtype)
         dummy_pos = ion_dict[interface.ion_pos_str] * dummy_mult
         #TODO!: replace + 0.5 with 0.5* diameter for correctness
-        dummy_add = tf.constant([0, 0, (0.5 * simul_box.lz) + 0.5], name="dummy_add_right", dtype=common.tf_dtype)
+        dummy_add = tf.constant([0, 0, (0.5 * simul_box.lz) ], name="dummy_add_right", dtype=common.tf_dtype)
         # dummy_add = dummy_add - (0.5 * ion_dict[interface.ion_diameters_str])
         dummy_pos = dummy_pos + dummy_add
         distances = ion_dict[interface.ion_pos_str] - dummy_pos
         r2 = common.magnitude_squared(distances, axis=1, keepdims=True)  # keep 1th dimension to match up with distances later
         #  + ion_dict[interface.ion_diameters_str] * 0.5
-        d2 = tf.math.pow((ion_dict[interface.ion_diameters_str] + ion_dict[interface.ion_diameters_str])
-                             * 0.5, 2.0, name="d_2_pow")[:, tf.newaxis]  # add new dimension to match up with distances later
+        d2 = tf.math.pow((ion_dict[interface.ion_diameters_str] * 0.5), 2.0, name="d_2_pow")[:, tf.newaxis]  # add new dimension to match up with distances later
         # d_six = tf.math.pow(d2, 3.0, name="diam_6_pow")
         # r_six = tf.math.pow(r2, 3.0, name="mag_6_pow")
 
@@ -167,53 +207,12 @@ def _right_wall_lj_force(simul_box, ion_dict):
 
         d_r_6 = tf.math.pow(d2, 3.0, name="diam_6_pow") / tf.math.pow(r2, 3.0, name="mag_6_pow") # magnitude is alread "squared" so only need N/2 power
         d_r_12 = tf.math.pow(d2, 6.0, name="diam_12_pow") / tf.math.pow(r2, 6.0, name="r_12_pow")
-        slice_forces = distances * \
-            (48.0 * utility.elj * (d_r_12 - 0.5 * d_r_6) * (1.0/r2))
+        slice_forces = distances * (48.0 * utility.elj * (d_r_12 - 0.5 * d_r_6) * (1.0/r2))
 
-        d_cut = tf.compat.v1.where_v2(
-            r2 < (d2 * utility.dcut2), slice_forces, _tf_zero, name="where_d_cut")
+        d_cut = tf.compat.v1.where_v2(r2 < (d2 * utility.dcut2), slice_forces, _tf_zero, name="where_d_cut")
         # return d_cut
         return tf.compat.v1.where_v2(mask[:, tf.newaxis], d_cut, _tf_zero, name="lj_wall_bulk_cutoff")#, distances, dummy_pos   -----revisit this
 
-def _electrostatic_wall_force(simul_box, ion_dict, wall_dictionary):
-    """
-    ion interacting via electrostatic force with discrete planar wall
-    """
-    with tf.name_scope("electrostatic_wall_force"):
-        wall_distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - wall_dictionary["posvec"], elems=ion_dict[interface.ion_pos_str])
-        wall_z_dist = wall_distances[:, :, -1] # get z-axis value
-        factor = tf.compat.v1.where_v2(wall_z_dist >= 0.0, _tf_one, _tf_neg_one, name="where_factor")
-        r1_rightwall = tf.math.sqrt(0.5 + (wall_z_dist / simul_box.lx) * (wall_z_dist / simul_box.lx))
-        r2_rightwall = tf.math.sqrt(0.25 + (wall_z_dist / simul_box.lx) * (wall_z_dist / simul_box.lx))
-
-        E_z_rightwall = 4 * tf.math.atan(4 * tf.math.abs(wall_z_dist) * r1_rightwall / simul_box.lx)
-        hcsh_rightwall = (4 / simul_box.lx) * (1 / (r1_rightwall * (0.5 + r1_rightwall)) - 1 / (r2_rightwall * r2_rightwall)) * wall_z_dist + factor * E_z_rightwall +\
-               16 * tf.math.abs(wall_z_dist) * (simul_box.lx / (simul_box.lx * simul_box.lx + 16 * wall_z_dist * wall_z_dist * r1_rightwall * r1_rightwall)) *\
-               (tf.math.abs(wall_z_dist) * wall_z_dist / (simul_box.lx * simul_box.lx * r1_rightwall) + factor * r1_rightwall)
-
-        # h1_rightwall.z = h1_rightwall.z + 2 * ion[i].q * (wall_dummy.q / (box.lx * box.lx)) * 0.5 * (1 / ion[i].epsilon + 1 / wall_dummy.epsilon) * hcsh_rightwall;
-        ion_one_over_ep = 1 / ion_dict[interface.ion_epsilon_str] # 1 / ion[i].epsilon
-        wall_one_over_ep = 1 / wall_dictionary["epsilon"] # 1 / wall_dummy.epsilon
-        q_over_lx_sq = wall_dictionary["q"] / (simul_box.lx * simul_box.lx) # (wall_dummy.q / (box.lx * box.lx))
-        vec_one_over_ep = common.wrap_vectorize(fn=lambda ion_eps: wall_one_over_ep + ion_eps, elems=ion_one_over_ep) # (1 / ion[i].epsilon + 1 / wall_dummy.epsilon)
-        vec_q_over_lx_sq = common.wrap_vectorize(fn=lambda q_j: q_over_lx_sq * q_j, elems=ion_dict[interface.ion_charges_str]) # ion[i].q * (wall_dummy.q / (box.lx * box.lx))
-        
-        h1_z = 2 * vec_q_over_lx_sq * 0.5 * (vec_one_over_ep) * hcsh_rightwall
-        h1_z = tf.math.reduce_sum(h1_z, axis=1, keepdims=True, name="sum_h1_z")
-
-        # h1_rightwall = h1_rightwall+ ((temp_vec_rightwall ^ ((-1.0) / r3_rightwall)) ^ ((-0.5) * ion[i].q * wall_dummy.q * (1 / ion[i].epsilon + 1 / wall_dummy.epsilon)));
-        wrapped_distances = common.wrap_distances_on_edges(simul_box, wall_distances)
-        r = common.magnitude(wrapped_distances, keepdims=True) # keep third dimension to divide third dim in wrapped_distances later
-        r3 = tf.math.pow(r, 3.0, name="r_3")
-
-        vec_q_mul = common.wrap_vectorize(fn=lambda q_j: wall_dictionary["q"] * q_j, elems=ion_dict[interface.ion_charges_str])
-        a = _zero_nans(wrapped_distances * ((-1.0) / r3)) * ((-0.5) * vec_q_mul * vec_one_over_ep)[:,:,tf.newaxis] 
-        h1 = tf.math.reduce_sum(a, axis=1, keepdims=False, name="sum_a_mul_b")
-        z = h1[:,2:3] + h1_z
-        con = tf.concat(values=[h1[:,0:2], z], axis=1, name="h1x_y_and_h1_z_concatenate")
-        #print("\n _electrostatic_wall_force :: utility.scalefactor",utility.scalefactor)
-        #print("\n _electrostatic_wall_force :: con",con)
-        return con * utility.scalefactor
 
 def _electrostatic_right_wall_force(simul_box, ion_dict):
     """
@@ -249,7 +248,7 @@ def for_md_calculate_force(simul_box, ion_dict):
         rw_lj = _right_wall_lj_force(simul_box, ion_dict)
         #rw_lj_out = tf.Print(rw_lj,[rw_lj[0].shape, rw_lj[1].shape, rw_lj[2].shape])
         #print("RW_LJ:::",rw_lj)
-        ion_dict[interface.ion_for_str] = plj + lw_lj + rw_lj + erw + elw + pef
+        ion_dict[interface.ion_for_str] = pef + lw_lj + rw_lj + erw + elw + plj
         # print("\n\n ion_dict[interface.ion_for_str] ::: ",ion_dict[interface.ion_for_str])
         return ion_dict
 
@@ -284,38 +283,45 @@ def for_md_calculate_force(simul_box, ion_dict):
 #     sess.run(tf.compat.v1.global_variables_initializer())
 #     feed = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane), (ion_dict, tf_ion_place))
 #
-#     # pef, distances, h1, h1_z, hcsh, a, b = _particle_electrostatic_force(simul_box, tf_ion_real)
+#     pef, distances, h1, h1_z, hcsh, a, b = _particle_electrostatic_force(simul_box, tf_ion_real)
 #     # pef = _particle_electrostatic_force(simul_box, tf_ion_real)
-#     # check_op = tf.compat.v1.add_check_numerics_ops()
-#     # print("positions", ion_dict[interface.ion_pos_str])
+#     print("\n distances:", distances.shape)
+#     distances = distances.eval(session=sess)
+#     print("distances:",distances)
 #
-#     # print("\npef",pef)
-#     # # p, d, h1, h1_z, hcsh, a, b = sess.run([pef, distances, h1, h1_z, hcsh, a, b])
-#     # # print("p", p)
-#     # # print("d", d)
-#     # # print("h1", h1)
-#     # # # print("h1_z", h1_z, h1_z.shape, "\n\n")
-#     # # print("hcsh", hcsh)
-#     # # print("a", a)
-#     # # print("b", b)
-#     # # h1_x_y = h1[:,0:2] #TODO: replace this junk with better impl
-#     # # c = h1[:,2:3] + h1_z
-#     # # print("h1_x_y", h1_x_y)
-#     # # print("h1[:,2:3]", h1[:,2:3])
-#     # # print("c", c)
-#     # pef = pef.eval(session=sess)
-#     # print(pef)
-#     # if(pef.shape != pos_shp):
-#     #     raise Exception("bad shape {}".format(pef.shape))
+#     check_op = tf.compat.v1.add_check_numerics_ops()
+#     print("positions:", ion_dict[interface.ion_pos_str])
 #
-#     # # exit()
+#     print("\n pef:",pef)
+#     # p, d, h1, h1_z, hcsh, a, b = sess.run([pef, distances, h1, h1_z, hcsh, a, b])
+#     # print("p", p)
+#     # print("d", d)
+#     # print("h1", h1)
+#     # # print("h1_z", h1_z, h1_z.shape, "\n\n")
+#     # print("hcsh:", hcsh)
+#     # print("a", a)
+#     # print("b", b)
+#     # h1_x_y = h1[:,0:2] #TODO: replace this junk with better impl
+#     # c = h1[:,2:3] + h1_z
+#     # print("h1_x_y", h1_x_y)
+#     # print("h1[:,2:3]", h1[:,2:3])
+#     # print("c", c)
+#     hcsh = hcsh.eval(session=sess)
+#     print("hcsh:", hcsh)
+#
+#     pef = pef.eval(session=sess)
+#     print("pef:",pef)
+#     if(pef.shape != pos_shp):
+#         raise Exception("bad shape {}".format(pef.shape))
+#     print("\n hcsh:",hcsh)
+#     # exit()
 #
 #     # plj = _particle_lj_force(simul_box, tf_ion_real)
 #     # print("\nplj", plj)
 #     # print(plj.eval(session=sess))
 #     # if(plj.shape != pos_shp):
 #     #     raise Exception("bad shape {}".format(plj.shape))
-#
+#     #
 #     # lw_lj = _left_wall_lj_force(simul_box, tf_ion_real)
 #     # print("\nleft", lw_lj)
 #     # lw_lj = sess.run([lw_lj])
@@ -325,37 +331,37 @@ def for_md_calculate_force(simul_box, ion_dict):
 #     #     raise Exception("Got a non-zero force in x or y direction on left wall forces")
 #     # if(lw_lj.shape != pos_shp):
 #     #     raise Exception("bad shape {}".format(lw_lj.shape))
-#
-#     rw_lj, distances, dummy_pos = _right_wall_lj_force(simul_box, tf_ion_real)
-#     print("\nright", rw_lj)
-#     rw_lj, distances, dummy_pos = sess.run([rw_lj, distances, dummy_pos])
-#     print("rw_lj", rw_lj)
-#     print("dummy_pos", dummy_pos)
-#     print("distances", distances)
-#
-#     if (rw_lj[:,0:2] != 0).any():
-#         raise Exception("Got a non-zero force in x or y direction on right wall forces")
-#     if(rw_lj.shape != pos_shp):
-#         raise Exception("bad shape {}".format(rw_lj.shape))
-#     exit()
-#
-#     erw = _electrostatic_right_wall_force(simul_box, tf_ion_real)
-#     print("\nerw", erw)
-#     erw = erw.eval(session=sess)
-#     print(erw)
-#     if(erw.shape != pos_shp):
-#         raise Exception("bad shape {}".format(erw.shape))
-#
-#     elw = _electrostatic_left_wall_force(simul_box, tf_ion_real)
-#     print("\nelw", elw)
-#     elw = elw.eval(session=sess)
-#     print(elw)
-#     if(elw.shape != pos_shp):
-#         raise Exception("bad shape {}".format(elw.shape))
-#
-#     md_force = for_md_calculate_force(simul_box, tf_ion_real)
-#     print("\nmd_force", md_force)
-#     md_force = md_force[interface.ion_for_str].eval(session=sess)
-#     print(md_force)
-#     if(md_force.shape != pos_shp):
-#         raise Exception("bad shape {}".format(md_force.shape))
+#     #
+#     # rw_lj, distances, dummy_pos = _right_wall_lj_force(simul_box, tf_ion_real)
+#     # print("\nright", rw_lj)
+#     # rw_lj, distances, dummy_pos = sess.run([rw_lj, distances, dummy_pos])
+#     # print("rw_lj", rw_lj)
+#     # print("dummy_pos", dummy_pos)
+#     # print("distances", distances)
+#     #
+#     # if (rw_lj[:,0:2] != 0).any():
+#     #     raise Exception("Got a non-zero force in x or y direction on right wall forces")
+#     # if(rw_lj.shape != pos_shp):
+#     #     raise Exception("bad shape {}".format(rw_lj.shape))
+#     # exit()
+#     #
+#     # erw = _electrostatic_right_wall_force(simul_box, tf_ion_real)
+#     # print("\nerw", erw)
+#     # erw = erw.eval(session=sess)
+#     # print(erw)
+#     # if(erw.shape != pos_shp):
+#     #     raise Exception("bad shape {}".format(erw.shape))
+#     #
+#     # elw = _electrostatic_left_wall_force(simul_box, tf_ion_real)
+#     # print("\nelw", elw)
+#     # elw = elw.eval(session=sess)
+#     # print(elw)
+#     # if(elw.shape != pos_shp):
+#     #     raise Exception("bad shape {}".format(elw.shape))
+#     #
+#     # md_force = for_md_calculate_force(simul_box, tf_ion_real)
+#     # print("\nmd_force", md_force)
+#     # md_force = md_force[interface.ion_for_str].eval(session=sess)
+#     # print(md_force)
+#     # if(md_force.shape != pos_shp):
+#     #     raise Exception("bad shape {}".format(md_force.shape))

@@ -10,6 +10,10 @@ np.random.seed(0) # be consistent
 # np.set_printoptions(threshold=sys.maxsize)
 
 def start_sim(tf_sess_config, args):
+
+    #declaing the default values
+    fraction_diameter = 0.02
+
     negative_diameter_in = args.neg_diameter
     positive_diameter_in = args.pos_diameter
     charge_density = args.charge_density
@@ -34,14 +38,22 @@ def start_sim(tf_sess_config, args):
         exit(1)
     pz_in = args.pos_valency
     valency_counterion = pz_in
-    nz_in = args.neg_valency
-    fraction_diameter = 0.02
     counterion_diameter_in = positive_diameter_in
-    surface_area = bx * by * pow(10.0,-18) # in unit of squared meter
-    number_meshpoints = pow((1.0/fraction_diameter), 2.0)
-    charge_meshpoint = (charge_density * surface_area) / (utility.unitcharge * number_meshpoints) # in unit of electron charge
-    total_surface_charge = charge_meshpoint * number_meshpoints # in unit of electron charge
+    surface_area = bx * by * pow(10.0, -18)  # in unit of squared meter
+    number_meshpoints = pow((1.0 / fraction_diameter), 2.0)
+    charge_meshpoint = (charge_density * surface_area) / (utility.unitcharge * number_meshpoints)
+    # in unit of electron charge
+    total_surface_charge = charge_meshpoint * number_meshpoints  # in unit of electron charge
+    print("DEBUG:: total_surface_charge:", total_surface_charge)
     counterions =  2.0 * (int(abs(total_surface_charge)/valency_counterion)) # there are two charged surfaces, we multiply the counter ions by two
+    # counterions = 0
+
+    nz_in = args.neg_valency
+
+
+
+
+
 
     # we should make sure the total charge of both surfaces and the counter ions are zero
     if (((valency_counterion * counterions) + (total_surface_charge * 2.0 )) != 0):
@@ -62,6 +74,7 @@ def start_sim(tf_sess_config, args):
         mdremote.extra_compute = int(mdremote.steps * 0.01)
         mdremote.moviefreq = int(mdremote.steps * 0.001)
 
+    T=1
     simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in, salt_valency_out=0, bx=bx/utility.unitlength, by=by/utility.unitlength, bz=bz/utility.unitlength, \
         initial_ein=mdremote.ein, initial_eout=mdremote.eout)
     nz_in = -1
@@ -88,16 +101,16 @@ if __name__ == "__main__":
     parser.add_argument('-M', "--concentration", action="store", default=0.50, type=float)
     parser.add_argument('-e', "--pos-valency", action="store", default=1, type=int)
     parser.add_argument('-en', "--neg-valency", action="store", default=-1, type=int)
-    parser.add_argument('-cl', "--confinment-len", action="store", default=3, type=float)
+    parser.add_argument('-cl', "--confinment-len", action="store", default=3.0, type=float)
     parser.add_argument('-pd', "--pos-diameter", action="store", default=0.714, type=float)
     parser.add_argument('-nd', "--neg-diameter", action="store", default=0.714, type=float)
-    parser.add_argument('-d', "--charge-density", action="store", default=-0.01, type=float)
+    parser.add_argument('-d', "--charge-density", action="store", default=-0.00, type=float)
     parser.add_argument("--ein", action="store", default=80, type=float)
     parser.add_argument("--eout", action="store", default=80, type=float)
 
     parser.add_argument('-t', "--delta-t", action="store", default=0.001, type=float)
-    parser.add_argument('-s', "--steps", action="store", default=20000, type=int)
-    parser.add_argument('-f', "--freq", action="store", default=100, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=20, type=int)
+    parser.add_argument('-f', "--freq", action="store", default=1, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     parser.add_argument("--validate", action="store_true")
     parser.add_argument("--random-pos-init", action="store_false")
