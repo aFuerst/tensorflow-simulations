@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import time, os, shutil
 
-import utility, bin, forces, thermostat, velocities, particle, interface, energies, common
+import utility, bin, forces, thermostat, velocities, particle, interface, energies, common, control
 
 ke_placeholder = tf.compat.v1.placeholder(shape=(), dtype=common.tf_dtype, name="kinetic_energy_place")
 
@@ -46,10 +46,20 @@ def build_graph(simul_box, thermostats, ion_dict, dt:float, sample_iter):
 
     return thermostats, ion_dict, bin.tf_get_ion_bin_density(simul_box, ion_dict), ke_g, expfac_real_g
 
-def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, log_freq):
+def save_useful_data(i, therms_out, particle_ke, potential_energy, real_bath_ke, real_bath_pe):
+    # TODO: write energies and thermostats to files
+    # list_temperaturePath = rootDirectory + "temperature.dat"
+    # list_energyPath = rootDirectory + "energy.dat"
+    # f_temp = open(list_temperaturePath, "w")
+    # f_energy = open(list_energyPath, "w")
+    # #write statement here
+    # f_temp.write(cpmdstep+"\t"+str(2*energies.particle_kinetic_energy(ion)/(real_bath["dof"]*utility.kB))+"\t"+real_bath["T"]+"\t\n")
+    pass
+
+def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, log_freq, charge_meshpoint):
     # print(" filler")
     # print("placeholders : loop\n", tf_ion_place, "\n", thermos_place)
-    # print("graph : loop\n", thermo_g, "\n", ion_g, "\n", bin_density_g, "\n", ke_g, "\n", expfac_real_g)
+    print("graph : loop\n", thermo_g[0]['xi'], "\n", ion_g, "\n", bin_density_g, "\n", ke_g, "\n", expfac_real_g)
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
     ion_feed = common.create_feed_dict((ion_dict, tf_ion_place))
@@ -70,9 +80,25 @@ def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, ther
             common.throw_if_bad_boundaries(ion_dict_out[interface.ion_pos_str], simul_box)
             if (2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)) > 2:
                 raise Exception("Temperature too high! was '{}'".format(2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)))
+
+        # compute_n_write_useful_data
+        if i==1 or i%control.extra_compute == 0:
+            particle_ke, potential_energy, real_bath_ke, real_bath_pe = bin.compute_n_write_useful_data(ion_dict_out, therms_out, simul_box, charge_meshpoint)
+            save_useful_data(i, therms_out, particle_ke, potential_energy, real_bath_ke, real_bath_pe)
+
+        if i >= mdremote.moviestart and  i%mdremote.moviefreq == 0:
+            # TODO: make_movie()
+            pass
+
+        if i >= control.hiteqm:
+            # TODO:: bin.compute_density_profile()
+            pass
+
         bin.record_densities(pos_bin_density, neg_bin_density)
         print("iteration {} done".format(i))
-    bin.get_density_profile()
+
+        # TODO : average_errorbars_density()
+        # bin.get_density_profile()
 
 def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint: float, valency_counterion: int, mdremote):
     clean()
@@ -98,7 +124,7 @@ def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint: float, valenc
     print("var init (s)", time.time()-tot)
     d = time.time()
     loop(simul_box, thermostats_g, ion_dict_g, bin_density_g, ion_dict,
-         ion_place_copy, thermostats, thermo_place_copy, sess, mdremote, ke_g, expfac_real_g, initial_ke, mdremote.freq)
+         ion_place_copy, thermostats, thermo_place_copy, sess, mdremote, ke_g, expfac_real_g, initial_ke, mdremote.freq, charge_meshpoint)
     # print("\n Positions: after build_graph:", ion_dict_g[interface.ion_pos_str])
     f = time.time()
     print("total run (s)", f-d)

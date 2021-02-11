@@ -83,26 +83,43 @@ def update_eta(therms, dt: float):
 def calc_exp_factor(therms, dt):
     return tf.math.exp(-0.5 * dt * therms[0]["xi"])
 
-if __name__ == "__main__":
-    r = make_thremostats(5, 5)
-    print(len(r),r)
-    r_place, r_names = get_placeholders(r)
+def bath_potential_energy(therms):
+    with tf.name_scope("bath_potential_energy"):
+        pe = []
+        for j in range(0, len(therms)):
+            pe.append(_therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"] * therms[j]["eta"])
+    return pe
 
-    print("\n\n", r_place)
-    feed = therms_to_feed_dict(r, r_names)
-    print(feed, "\n\n")
-    x = reverse_update_xi(r_place, 0.01, 200.81)
-    x = update_eta(x, 0.01)
-    x = forward_update_xi(x, 0.01, 200.81)
-    print("\n result", x[0]["xi"])
-    print(feed)
-    sess = tf.compat.v1.Session()
-    sess.as_default()
-    out = sess.run(x, feed_dict=feed)
-    print(out, "\n")
-    ft = therms_to_feed_dict(out, r_names)
-    out = sess.run(x, feed_dict=ft)
-    print(out, "\n")
-    ft = therms_to_feed_dict(out, r_names)
-    out = sess.run(x, feed_dict=ft)
-    print(out, "\n")
+
+def bath_kinetic_energy(therms):
+    with tf.name_scope("bath_kinetic_energy"):
+        ke = []
+        for j in range(0, len(therms)):
+            ke.append(0.5 * _therm_constants[j]["Q"] * therms[j]["xi"] * therms[j]["xi"])
+    return ke
+
+
+
+# if __name__ == "__main__":
+#     r = make_thremostats(5, 5)
+#     print(len(r),r)
+#     r_place, r_names = get_placeholders(r)
+#
+#     print("\n\n", r_place)
+#     feed = therms_to_feed_dict(r, r_names)
+#     print(feed, "\n\n")
+#     x = reverse_update_xi(r_place, 0.01, 200.81)
+#     x = update_eta(x, 0.01)
+#     x = forward_update_xi(x, 0.01, 200.81)
+#     print("\n result", x[0]["xi"])
+#     print(feed)
+#     sess = tf.compat.v1.Session()
+#     sess.as_default()
+#     out = sess.run(x, feed_dict=feed)
+#     print(out, "\n")
+#     ft = therms_to_feed_dict(out, r_names)
+#     out = sess.run(x, feed_dict=ft)
+#     print(out, "\n")
+#     ft = therms_to_feed_dict(out, r_names)
+#     out = sess.run(x, feed_dict=ft)
+#     print(out, "\n")

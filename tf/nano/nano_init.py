@@ -107,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('-d', "--charge-density", action="store", default=-0.00, type=float)
     parser.add_argument("--ein", action="store", default=80, type=float)
     parser.add_argument("--eout", action="store", default=80, type=float)
-
+    # parser.add_argument('-ec', "--extra-compute", action="store", default=10000, type=int)
     parser.add_argument('-t', "--delta-t", action="store", default=0.001, type=float)
     parser.add_argument('-s', "--steps", action="store", default=20, type=int)
     parser.add_argument('-f', "--freq", action="store", default=1, type=int)

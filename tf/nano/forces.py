@@ -69,8 +69,7 @@ def _electrostatic_wall_force(simul_box, ion_dict, wall_dictionary):
     ion interacting via electrostatic force with discrete planar wall
     """
     with tf.name_scope("electrostatic_wall_force"):
-        wall_distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - wall_dictionary["posvec"],
-                                               elems=ion_dict[interface.ion_pos_str])
+        wall_distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - wall_dictionary["posvec"], elems=ion_dict[interface.ion_pos_str])
         wall_z_dist = wall_distances[:, :, -1]  # get z-axis value
         factor = tf.compat.v1.where_v2(wall_z_dist >= 0.0, _tf_one, _tf_neg_one, name="where_factor")
         r1_rightwall = tf.math.sqrt(0.5 + (wall_z_dist / simul_box.lx) * (wall_z_dist / simul_box.lx))
@@ -84,14 +83,12 @@ def _electrostatic_wall_force(simul_box, ion_dict, wall_dictionary):
         E_z_rightwall = 4 * tf.math.atan(4 * tf.math.abs(wall_z_dist) * r1_rightwall / simul_box.lx)
         hcsh_rightwall = (4 / simul_box.lx) * (1 / (r1_rightwall * (0.5 + r1_rightwall)) - 1 / (r2_rightwall * r2_rightwall)) * wall_z_dist + factor * E_z_rightwall + 16 * tf.math.abs(wall_z_dist) * (simul_box.lx / (
                     simul_box.lx * simul_box.lx + 16 * wall_z_dist * wall_z_dist * r1_rightwall * r1_rightwall)) * (tf.math.abs(wall_z_dist) * wall_z_dist / (simul_box.lx * simul_box.lx * r1_rightwall) + factor * r1_rightwall)
-
         # h1_rightwall.z = h1_rightwall.z + 2 * ion[i].q * (wall_dummy.q / (box.lx * box.lx)) * 0.5 * (1 / ion[i].epsilon + 1 / wall_dummy.epsilon) * hcsh_rightwall;
         ion_one_over_ep = 1 / ion_dict[interface.ion_epsilon_str]  # 1 / ion[i].epsilon
         wall_one_over_ep = 1 / wall_dictionary["epsilon"]  # 1 / wall_dummy.epsilon
         q_over_lx_sq = wall_dictionary["q"] / (simul_box.lx * simul_box.lx)  # (wall_dummy.q / (box.lx * box.lx))
         vec_one_over_ep = common.wrap_vectorize(fn=lambda ion_eps: wall_one_over_ep + ion_eps, elems=ion_one_over_ep)  # (1 / ion[i].epsilon + 1 / wall_dummy.epsilon)
         vec_q_over_lx_sq = common.wrap_vectorize(fn=lambda q_j: q_j * q_over_lx_sq, elems=ion_dict[interface.ion_charges_str])  # ion[i].q * (wall_dummy.q / (box.lx * box.lx))
-
         h1_z = 2 * vec_q_over_lx_sq * 0.5 * (vec_one_over_ep) * hcsh_rightwall
         h1_z = tf.math.reduce_sum(h1_z, axis=1, keepdims=True, name="sum_h1_z")
 

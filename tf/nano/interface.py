@@ -195,3 +195,7 @@ class Interface:
         self.right_plane = right_plane
         self.tf_left_plane, self.tf_place_left_plane = common.make_tf_versions_of_dict(left_plane)
         self.tf_right_plane, self.tf_place_right_plane = common.make_tf_versions_of_dict(right_plane)
+
+
+    def electrostatics_between_walls(self, charge_meshpoints):
+        pass

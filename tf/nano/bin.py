@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import utility, interface, common
+import utility, interface, common, energies
 
 bin_volume = None
 bin_width = None
@@ -34,7 +34,16 @@ def record_densities(pos_bin_positions, neg_bin_positions):
     pos_bin_density_records.append(pos_bin_positions)
     ned_bin_density_records.append(neg_bin_positions)
 
-def get_density_profile():
+
+def compute_n_write_useful_data(ion, real_bath, box, charge_meshpoint):
+    potential_energy = energies.energy_functional(box, charge_meshpoint, ion)
+    particle_ke = energies.kinetic_energy(ion)
+    real_bath_ke = tf.cast(energies.bath_kinetic_energy(real_bath), tf.float64)
+    real_bath_pe = tf.cast(energies.bath_potential_energy(real_bath), tf.float64)
+    extenergy = particle_ke + real_bath_ke + real_bath_pe + potential_energy
+    return particle_ke, potential_energy, real_bath_ke, real_bath_pe
+
+def compute_density_profile():
     #TODO: this
     pass
 
@@ -61,3 +70,6 @@ def get_density_profile():
 #     p, n = sess.run((p, n))
 #     print("pos", p)
 #     print("neg", n)
+
+
+        #

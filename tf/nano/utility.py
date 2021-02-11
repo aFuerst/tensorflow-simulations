@@ -11,3 +11,4 @@ unitlength = None
 scalefactor = None
 T = 1.0 # temperature in reduced units
 elj = 1.0
+pi = 3.141593
