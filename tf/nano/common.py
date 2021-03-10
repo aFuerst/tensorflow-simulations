@@ -38,6 +38,13 @@ def magnitude_squared(tensor, axis:int=2, keepdims:bool=False):
         return tf.math.reduce_sum(tf.math.pow(tensor,2.0), axis=axis, keepdims=keepdims)
 
 
+def my_tf_round(x, decimals = 0):
+    multiplier = tf.constant(10**decimals, dtype=x.dtype)
+    divisor = tf.constant(tf.math.pow(10, -decimals), dtype=x.dtype)
+    res = tf.round(x * multiplier) / multiplier
+    return res - (res % divisor)
+
+
 def magnitude_np(array, axis:int=2):
     """
     Calculate the magnituge of a numpy array, should be in shape [x,y,z] or [[x,y,z]]

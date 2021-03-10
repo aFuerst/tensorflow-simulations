@@ -10,4 +10,5 @@ def update_position(simul_box, ion_dict, dt: float):
         # print("\n Positions: update_position :: ion_dict[interface.ion_pos_str] = ", out_pos)
         ion_dict[interface.ion_pos_str] = common.wrap_distances_on_edges(simul_box, ion_dict[interface.ion_pos_str])
         # tf.print(ion_dict[interface.ion_pos_str])
+        # ion_dict[ion_vel_str] = ion_dict[ion_vel_str] - (ion_dict[ion_vel_str] % 0.001)
         return ion_dict

@@ -1,6 +1,7 @@
 import utility, common
 import math
 import numpy as np
+import tensorflow as tf
 from common import py_array_to_np as conv
 
 ion_for_str = "ion_forces"
@@ -9,6 +10,7 @@ ion_charges_str = "ion_charges"
 ion_diameters_str = "ion_diameters"
 ion_masses_str = "ion_masses"
 ion_epsilon_str = "ion_epsilon"
+ion_valency_str = "ion_valency"
 
 class Interface:
     #def __init__(self, salt_conc_in: float, salt_conc_out: float, salt_valency_in: int, salt_valency_out: int, bx: float, by: float, bz: float, initial_ein: float=80, initial_eout: float=80):
@@ -52,12 +54,12 @@ class Interface:
         volume_box = self.lx*self.ly*self.lz
 
         total_nions_inside = int((concentration * 0.6022) * (volume_box * utility.unitlength * utility.unitlength * utility.unitlength))
-        # total_nions_inside = 1
+        total_nions_inside = 4
         if (total_nions_inside % pz !=0):
             total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
 
         total_pions_inside = abs(nz) * total_nions_inside / pz
-        # total_pions_inside = 1
+        total_pions_inside = 4
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
         print("total_saltions_inside", total_saltions_inside)
 
@@ -155,7 +157,7 @@ class Interface:
                             ion_pos.append(posvec)
         # print("\n Positions: put_salt_ions_inside:",ion_pos)   values verified with C++ code
         return {ion_pos_str:conv(ion_pos), ion_charges_str:conv(ion_charges),\
-                 ion_masses_str:conv(ion_masses), ion_diameters_str:conv(ion_diameter), ion_epsilon_str:conv(ion_epsilon)}
+                 ion_masses_str:conv(ion_masses), ion_diameters_str:conv(ion_diameter), ion_epsilon_str:conv(ion_epsilon), ion_valency_str:conv(ion_valency)}  #, ion_valency_str:conv(ion_valency)}
         
     def discretize(self, smaller_ion_diameter: float, f: float, charge_meshpoint: float):
         print("charge_meshpoint", charge_meshpoint)
@@ -197,5 +199,12 @@ class Interface:
         self.tf_right_plane, self.tf_place_right_plane = common.make_tf_versions_of_dict(right_plane)
 
 
-    def electrostatics_between_walls(self, charge_meshpoints):
-        pass
+    def electrostatics_between_walls(self):
+        r_vec_walls = self.right_plane["posvec"] - self.left_plane["posvec"]
+        # print("\n r_vec_walls:", type(r_vec_walls))
+        r_vec_walls_magnitude = common.magnitude_np(r_vec_walls, axis=1)
+        fqq_walls = 0.5 * self.right_plane["q"] * self.left_plane["q"] * 0.5 * (1.0/self.right_plane["epsilon"]+1.0/self.left_plane["epsilon"]) / r_vec_walls_magnitude
+        # print("\n fqq_walls:", len(fqq_walls))
+        # fqq_walls = tf.math.reduce_sum(fqq_walls, axis=1)
+        electrostatics_between_walls = tf.math.reduce_sum(fqq_walls, axis=0)
+        return electrostatics_between_walls*utility.scalefactor
