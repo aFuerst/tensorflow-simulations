@@ -132,7 +132,7 @@ def make_movie(num, ion, box):
     for i in range(0, ion[interface.ion_valency_str].size):
         f_movie_file.write(str(i)+"\t"+str(type[i].eval(session=tf.compat.v1.Session()))+"\t"+str(ion[interface.ion_valency_str][i])+"\t"+str(ion[interface.ion_pos_str][i][0])+"\t"+str(ion[interface.ion_pos_str][i][1])+"\t"+str(ion[interface.ion_pos_str][i][2])+"\n")
     f_movie_file.close()
-    pass
+    pass   
 
 
 
