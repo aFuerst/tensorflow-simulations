@@ -40,9 +40,7 @@ def magnitude_squared(tensor, axis:int=2, keepdims:bool=False):
 
 def my_tf_round(x, decimals = 0):
     multiplier = tf.constant(10**decimals, dtype=x.dtype)
-    divisor = tf.constant(tf.math.pow(10, -decimals), dtype=x.dtype)
-    res = tf.round(x * multiplier) / multiplier
-    return res - (res % divisor)
+    return tf.round(x * multiplier) / multiplier
 
 
 def magnitude_np(array, axis:int=2):

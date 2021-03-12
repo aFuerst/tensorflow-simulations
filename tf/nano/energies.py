@@ -237,10 +237,10 @@ def energy_functional(box, charge_meshpoint, ion_dict):
         coulomb_rightwall = _right_wall_columb_energy(ion_dict, box)
         coulomb_leftwall = _left_wall_columb_energy(ion_dict, box)
     # print("\n coulumb:",tf.reduce_sum(ion_energy(ion_dict, box)).eval(session=tf.compat.v1.Session()), " lj-ion-ion:", tf.reduce_sum(_lj_energy(ion_dict, box)).eval(session=tf.compat.v1.Session())," lj-left-wall:",tf.reduce_sum(_left_wall_lj_energy(ion_dict, box)).eval(session=tf.compat.v1.Session()))
-    potential = ion_energy(ion_dict, box) + _lj_energy(ion_dict, box) + _left_wall_lj_energy(ion_dict, box) + _right_wall_lj_energy(ion_dict, box) + coulomb_rightwall + coulomb_leftwall
-    #totalpotential = tf.reduce_sum(potential)
+    potential = _lj_energy(ion_dict, box) +_left_wall_lj_energy(ion_dict, box) + _right_wall_lj_energy(ion_dict, box) + ion_energy(ion_dict, box) + coulomb_rightwall + coulomb_leftwall
+    totalpotential = tf.reduce_sum(potential)
     total_electrostatics_walls = box.electrostatics_between_walls()
-    potential += total_electrostatics_walls
+    totalpotential += total_electrostatics_walls
 
     return potential  #- (totalpotential%0.0001)
 

@@ -75,11 +75,6 @@ def _electrostatic_wall_force(simul_box, ion_dict, wall_dictionary):
         r1_rightwall = tf.math.sqrt(0.5 + (wall_z_dist / simul_box.lx) * (wall_z_dist / simul_box.lx))
         r2_rightwall = tf.math.sqrt(0.25 + (wall_z_dist / simul_box.lx) * (wall_z_dist / simul_box.lx))
 
-        # condition = tf.equal(wall_z_dist, 0)
-        # r1_rightwall = tf.compat.v1.where_v2(condition, wall_z_dist, r1_rightwall, name="r1_cleanup")
-        # r2_rightwall = tf.compat.v1.where_v2(condition, wall_z_dist, r2_rightwall, name="r2_cleanup")
-
-
         E_z_rightwall = 4 * tf.math.atan(4 * tf.math.abs(wall_z_dist) * r1_rightwall / simul_box.lx)
         hcsh_rightwall = (4 / simul_box.lx) * (1 / (r1_rightwall * (0.5 + r1_rightwall)) - 1 / (r2_rightwall * r2_rightwall)) * wall_z_dist + factor * E_z_rightwall + 16 * tf.math.abs(wall_z_dist) * (simul_box.lx / (
                     simul_box.lx * simul_box.lx + 16 * wall_z_dist * wall_z_dist * r1_rightwall * r1_rightwall)) * (tf.math.abs(wall_z_dist) * wall_z_dist / (simul_box.lx * simul_box.lx * r1_rightwall) + factor * r1_rightwall)
@@ -115,33 +110,24 @@ def _particle_lj_force(simul_box, ion_dict):
     """
     with tf.name_scope("particle_lj_force"):
         distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - ion_dict[interface.ion_pos_str] , elems=ion_dict[interface.ion_pos_str])
+        wrapped_distances = common.wrap_distances_on_edges(simul_box, distances)
         d = common.wrap_vectorize(fn=lambda atom_diam: ion_dict[interface.ion_diameters_str] + atom_diam, elems=ion_dict[interface.ion_diameters_str]) * 0.5
         d = d[:,:,tf.newaxis] # add third dimension to match with wrapped_distances and r2 later
-        wrapped_distances = common.wrap_distances_on_edges(simul_box, distances)
-        r2 = common.magnitude_squared(wrapped_distances, axis=2, keepdims=True)  # keep third dimension to match with wrapped_distances
-        condition = tf.equal(r2, 0)
-        d = tf.compat.v1.where_v2(condition, r2, d, name="d_cleanup")
-        # condition = tf.equal(distances, 0)
-        wrapped_distances = tf.compat.v1.where_v2(condition, r2, wrapped_distances, name="wrapped_distances_cleanup")
 
+        r2 = common.magnitude_squared(wrapped_distances, axis=2, keepdims=True)  # keep third dimension to match with wrapped_distances
+        condition = tf.equal(wrapped_distances, 0)
+        d = tf.compat.v1.where_v2(condition, wrapped_distances, d, name="d_cleanup")
+        # condition = tf.equal(distances, 0)
+        # wrapped_distances = tf.compat.v1.where_v2(condition, r2, wrapped_distances, name="wrapped_distances_cleanup")
         d_2 = tf.math.pow(d, 2.0, name="square_diam_diff")
-        # d_6 = tf.math.pow(d, 6.0, name="diam_6_pow") / tf.math.pow(r2, 3.0, name="mag_6_pow") # magnitude is alread "squared" so only need N/2 power
-        # d_12 = tf.math.pow(d, 12.0, name="diam_12_pow") / tf.math.pow(r2, 6.0, name="mag_12_pow")
-        # slice_forces = wrapped_distances * (48.0 * utility.elj * (d_12 - 0.5 * d_6) * (1.0 / r2))
-        
         d_6 = tf.math.pow(d_2, 3.0, name="diam_6_pow")
         r_6 = tf.math.pow(r2, 3.0, name="r_6_pow") # magnitude is alread "squared" so only need N/2 power
         d_12 = tf.math.pow(d_2, 6.0, name="diam_12_pow")
         r_12 = tf.math.pow(r2, 6.0, name="r_12_pow")
         slice_forces = wrapped_distances * (48.0 * utility.elj * ((d_12/r_12) - 0.5 * (d_6/r_6)) * (1.0/r2))
-
-        # handle case distances pos - atom_pos == 0, causing inf and nan to appear in that position
-        # slice_forces = tf.compat.v1.debugging.check_numerics(slice_forces, message="slice_forces lj forces")
-        # filter = tf.math.logical_or(tf.math.is_nan(slice_forces), r2 >= (utility.dcut2*d_2), name="or")
         slice_forces = tf.compat.v1.where_v2(tf.math.is_nan(slice_forces), _tf_zero, slice_forces, name="where_nan")
         slice_forces = tf.compat.v1.where_v2(r2 < (utility.dcut2*d_2), slice_forces, _tf_zero, name="where_dcut")
         # filtered = tf.compat.v1.debugging.check_numerics(filtered, message="filtered lj forces")
-        # print("slice_forces", slice_forces)
         return tf.math.reduce_sum(slice_forces, axis=1)
     
 def _left_wall_lj_force(simul_box, ion_dict):
@@ -163,14 +149,6 @@ def _left_wall_lj_force(simul_box, ion_dict):
         r2 = common.magnitude_squared(distances, axis=1, keepdims=True)  # keep 1th dimension to match up with distances later
         #  + ion_dict[interface.ion_diameters_str] * 0.5
         diam_2 = tf.math.pow(ion_dict[interface.ion_diameters_str] * 0.5, 2.0, name="diam_2_pow")[:, tf.newaxis]  # add new dimension to match up with distances later
-
-        # d6 = tf.math.pow(diam_2, 3.0, name="diam_6_pow")
-        # r6 = tf.math.pow(r2, 3.0, name="r_6_pow")
-
-        # d12 = tf.math.pow(d6, 2.0, name="diam_12_pow")
-        # r12 = tf.math.pow(r6, 2.0, name="r_12_pow")
-        # slice_forces = distances * (48.0 * utility.elj * ((d12/r12) - 0.5 * (d6/r6)) * (1.0/r2))
-
         d_r_6 = tf.math.pow(diam_2, 3.0, name="diam_6_pow") / tf.math.pow(r2, 3.0, name="r_6_pow") # magnitude is alread "squared" so only need N/2 power
         d_r_12 = tf.math.pow(diam_2, 6.0, name="diam_12_pow") / tf.math.pow(r2, 6.0, name="r_12_pow")
         slice_forces = distances * (48.0 * utility.elj * (d_r_12 - 0.5 * d_r_6) * (1.0 / r2))
@@ -221,6 +199,7 @@ def for_md_calculate_force(simul_box, ion_dict, charge_meshpoint):
     Updates the forces acting on each ion and returns the updated ion_dict
     """
     # print("\n box dims:", simul_box.lx," y:",simul_box.ly," z:",simul_box.lz)
+    charge_meshpoint = 0.0
     with tf.name_scope("for_md_calculate_force"):
         log_forces = open("output/temp.dat", 'a')
         pef = _particle_electrostatic_force(simul_box, ion_dict)
@@ -230,16 +209,16 @@ def for_md_calculate_force(simul_box, ion_dict, charge_meshpoint):
         if abs(charge_meshpoint) != 0:
             erw = _electrostatic_right_wall_force(simul_box, ion_dict)
             elw = _electrostatic_left_wall_force(simul_box, ion_dict)
-            # out_pef = tf.Print(pef,
-            #                    [pef[0], plj[0], lw_lj[0], lw_lj[1], rw_lj[0], erw[0], elw[0]], "::PEF")
+            out_pef = tf.Print(pef,
+                               [pef[0], plj[0], lw_lj[0], lw_lj[1], rw_lj[0], erw[0], elw[0]], "::PEF")
         else:
             erw = 0.0
             elw = 0.0
-            # out_pef = tf.Print(pef,
-            #                    [pef[0], plj[0], lw_lj[0], rw_lj[0], erw, elw ], "::PEF")
+            out_pef = tf.Print(pef,
+                               [pef[0], plj[0], lw_lj[0], rw_lj[0], erw, elw ], "::PEF")
 
         # log_forces.write("pef:"+str(pef.eval(session=tf.compat.v1.Session())) + "\t lw_lj:"+str(lw_lj.eval(session=tf.compat.v1.Session()))+"\t rw_lj:"+str(rw_lj.eval(session=tf.compat.v1.Session()))+"\t erw:"+str(erw.eval(session=tf.compat.v1.Session()))+"\t elw:"+str(elw.eval(session=tf.compat.v1.Session()))+"\t plj:"+str(plj.eval(session=tf.compat.v1.Session()))+"\t")
-        ion_dict[interface.ion_for_str] = pef + lw_lj + rw_lj + erw + elw + plj
+        ion_dict[interface.ion_for_str] = plj + lw_lj + rw_lj + erw + elw + out_pef
         # ion_dict[interface.ion_for_str] = ion_dict[interface.ion_for_str] - ion_dict[interface.ion_for_str]% 0.0001
         return ion_dict
 

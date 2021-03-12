@@ -29,7 +29,7 @@ class Interface:
         self.lB_in = (utility.lB_water * utility.epsilon_water / self.ein) / utility.unitlength
         self.lB_out = (utility.lB_water * utility.epsilon_water / self.eout) / utility.unitlength
         if (salt_conc_in != 0):
-            self.inv_kappa_in = (0.257 / (salt_valency_in * math.sqrt(self. lB_in * utility.unitlength * salt_conc_in))) / utility.unitlength
+            self.inv_kappa_in = 0 #(0.257 / (salt_valency_in * math.sqrt(self. lB_in * utility.unitlength * salt_conc_in))) / utility.unitlength
             self.mean_sep_in = pow(1.2 * salt_conc_in, -1.0/3.0) / utility.unitlength
         else:
             self.inv_kappa_in = 0
@@ -53,13 +53,13 @@ class Interface:
 
         volume_box = self.lx*self.ly*self.lz
 
-        total_nions_inside = int((concentration * 0.6022) * (volume_box * utility.unitlength * utility.unitlength * utility.unitlength))
-        total_nions_inside = 4
-        if (total_nions_inside % pz !=0):
-            total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
-
-        total_pions_inside = abs(nz) * total_nions_inside / pz
-        total_pions_inside = 4
+        # total_nions_inside = int((concentration * 0.6022) * (volume_box * utility.unitlength * utility.unitlength * utility.unitlength))
+        total_nions_inside = 10
+        # if (total_nions_inside % pz !=0):
+        #     total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
+        #
+        # total_pions_inside = abs(nz) * total_nions_inside / pz
+        total_pions_inside = 10
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
         print("total_saltions_inside", total_saltions_inside)
 

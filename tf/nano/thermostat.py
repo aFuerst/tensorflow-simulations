@@ -27,8 +27,8 @@ def therms_to_feed_dict(therms, therms_place):
             feed[therms_place[therm_key][key]] = value
     return feed
 
-def make_thremostats(chain_length_real, ions_count):
-    Q = 1.0  # thremostat mass
+def make_thermostats(chain_length_real, ions_count, Q):
+    # Q = 1.0  # thremostat mass
     therms = []
     i=0
     if (chain_length_real == 1):
@@ -49,12 +49,17 @@ def update_xi_at(therms, j, dt, ke):
         return therms
 
     if (j != 0):
-        therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + 0.5 * dt * (1.0 / _therm_constants[j]["Q"]) * (_therm_constants[j - 1]["Q"] * 1 * 1 - _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"]) * tf.math.exp(-0.25 * dt * therms[j + 1]["xi"])
+        therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + \
+        0.5 * dt * (1.0 / _therm_constants[j]["Q"]) * \
+        (_therm_constants[j - 1]["Q"] * therms[j - 1]["xi"] * therms[j - 1]["xi"] - _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"]) * \
+        tf.math.exp(-0.25 * dt * therms[j + 1]["xi"])
         # therms[j]["xi"] = common.my_tf_round(therms[j]["xi"], 6)
         # _therm_constants[j]["Q"] = common.my_tf_round(_therm_constants[j]["Q"], 6)
 
     else:
-        therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + (0.5 * dt * (1.0 / _therm_constants[j]["Q"]) * (2 * ke - _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"]) * tf.math.exp(-0.25 * dt * therms[j + 1]["xi"]))
+        therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + \
+        0.5 * dt * (1.0 / _therm_constants[j]["Q"]) * \
+        (2 * ke - _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"]) * tf.math.exp(-0.25 * dt * therms[j + 1]["xi"])
         # therms[j]["xi"] = common.my_tf_round(therms[j]["xi"], 6)
         # _therm_constants[j]["Q"] = common.my_tf_round(_therm_constants[j]["Q"], 6)
 
@@ -82,11 +87,7 @@ def update_eta(therms, dt: float):
         return therms
 
 def calc_exp_factor(therms, dt):
-
-    # print("therms[0][xi]:", (therms[0]["xi"]).eval(session=tf.compat.v1.Session())," dt:",dt)
-    # out_xi = tf.Print(therms[0]["xi"],[therms[0]["xi"], dt, tf.math.exp(-therms[0]["xi"]*(-0.5)*0.001)],"[0].xi")
-    exp_fac = tf.math.exp(-0.5 * dt * therms[0]["xi"])
-    return exp_fac
+    return tf.math.exp(-0.5 * dt * therms[0]["xi"])
 
 def bath_potential_energy(therms):
     with tf.name_scope("bath_potential_energy"):

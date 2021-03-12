@@ -51,7 +51,7 @@ def record_densities(iter, pos_bin_density, neg_bin_density, no_samples, bins, w
     mean_pos_bin_density = np.sum(pos_bin_density_records, axis=0, keepdims=False) / no_samples
     mean_neg_bin_density = np.sum(neg_bin_density_records, axis=0, keepdims=False) / no_samples
     if iter % writedensity==0:
-        path = "output_850_2/"
+        path = utility.root_path
         outdenp = open(os.path.join(path,"_z+_den-{}.dat".format(iter)), 'w')
         outdenn = open(os.path.join(path,"_z-_den-{}.dat".format(iter)), 'w')
         for b in range(0, len(mean_pos_bin_density)):

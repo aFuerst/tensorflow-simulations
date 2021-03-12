@@ -36,6 +36,5 @@ def update_velocity(ion_dict, dt: float, expfac):
         # print("\n dt", dt)
         # expfac = tf.cast(1.0, tf.float64)
         ion_dict[ion_vel_str] = (ion_dict[ion_vel_str] * expfac) + (ion_dict[interface.ion_for_str] * (0.5 * dt * tf.math.sqrt(expfac)))
-        ion_dict[ion_vel_str] = ion_dict[ion_vel_str]
         # ion_dict[ion_vel_str] = ion_dict[ion_vel_str]  - (ion_dict[ion_vel_str] %0.001)
         return ion_dict
