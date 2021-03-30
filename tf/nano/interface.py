@@ -29,7 +29,7 @@ class Interface:
         self.lB_in = (utility.lB_water * utility.epsilon_water / self.ein) / utility.unitlength
         self.lB_out = (utility.lB_water * utility.epsilon_water / self.eout) / utility.unitlength
         if (salt_conc_in != 0):
-            self.inv_kappa_in = 0 #(0.257 / (salt_valency_in * math.sqrt(self. lB_in * utility.unitlength * salt_conc_in))) / utility.unitlength
+            self.inv_kappa_in = (0.257 / (salt_valency_in * math.sqrt(self. lB_in * utility.unitlength * salt_conc_in))) / utility.unitlength
             self.mean_sep_in = pow(1.2 * salt_conc_in, -1.0/3.0) / utility.unitlength
         else:
             self.inv_kappa_in = 0
@@ -54,12 +54,12 @@ class Interface:
         volume_box = self.lx*self.ly*self.lz
 
         # total_nions_inside = int((concentration * 0.6022) * (volume_box * utility.unitlength * utility.unitlength * utility.unitlength))
-        total_nions_inside = 10
+        total_nions_inside = 1
         # if (total_nions_inside % pz !=0):
         #     total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
         #
         # total_pions_inside = abs(nz) * total_nions_inside / pz
-        total_pions_inside = 10
+        total_pions_inside = 1
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
         print("total_saltions_inside", total_saltions_inside)
 
@@ -86,7 +86,7 @@ class Interface:
             while (len(ion_pos) != total_saltions_inside):
                 x = np.random.random()
                 x = (1 - x) * (-r0_x) + x * (r0_x)
-                
+
                 y = np.random.random()
                 y = (1 - y) * (-r0_y) + y * (r0_y)
                 
@@ -134,6 +134,7 @@ class Interface:
                         if len(ion_pos) < total_saltions_inside:
                             z = (-self.lz/2 + (0.5 * bigger_ion_diameter)) + k * bigger_ion_diameter
                             posvec = np.array([x,y,z])
+                            print("\n lx:",self.lx," ly:",self.ly," big_diam:", bigger_ion_diameter," posvec:",posvec)
                             if (x > ((self.lx/2)-(0.5 * bigger_ion_diameter)) or y > ((self.ly/2)-(0.5 * bigger_ion_diameter)) or z > ((self.lz/2)-(0.5 * bigger_ion_diameter))):
                                 continue
                             if (len(ion_pos) < counterions):

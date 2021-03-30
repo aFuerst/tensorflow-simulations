@@ -31,11 +31,17 @@ def start_sim(tf_sess_config, args):
     utility.scalefactor = utility.epsilon_water * utility.lB_water / utility.unitlength
     bz = args.confinment_len
     salt_conc_in = args.concentration
-    bx = math.sqrt(212 / 0.6022 / salt_conc_in / bz)
+    # bx = math.sqrt(212 / 0.6022 / salt_conc_in / bz)
+    bx = args.bx
+    if salt_conc_in > 0.5:
+        bx = 10.0
+        args.fraction_diameter = 1 / 28.0;
+    else:
+        bx = 15.0
+        args.fraction_diameter = 1 / 42.0;
     by = bx
-    # print(str(bx), " ", str(by)," ",)
-    if (
-            charge_density < -0.01 or charge_density > 0.0):  # we can choose charge density on surface between 0.0 (uncharged surfaces)  to -0.01 C/m2.
+    print("bx by unitlength",str(bx), " ", str(by)," ",bz," ",utility.unitlength," ",salt_conc_in)
+    if (charge_density < -0.01 or charge_density > 0.0):  # we can choose charge density on surface between 0.0 (uncharged surfaces)  to -0.01 C/m2.
         print("\ncharge density on the surface must be between zero to -0.01 C/m-2 aborting\n")
         exit(1)
     pz_in = args.pos_valency
@@ -44,12 +50,13 @@ def start_sim(tf_sess_config, args):
     surface_area = bx * by * pow(10.0, -18)  # in unit of squared meter
     number_meshpoints = pow((1.0 / args.fraction_diameter), 2.0)
     charge_meshpoint = (charge_density * surface_area) / (utility.unitcharge * number_meshpoints)
+    # charge_meshpoint = 0
     # in unit of electron charge
     total_surface_charge = charge_meshpoint * number_meshpoints  # in unit of electron charge
-    print("DEBUG:: total_surface_charge:", total_surface_charge)
+    print("DEBUG:: total_surface_charge:", total_surface_charge, " charge_meshpoint:",charge_meshpoint," number of meshpoints:",number_meshpoints)
     counterions = 2.0 * (int(abs(
         total_surface_charge) / valency_counterion))  # there are two charged surfaces, we multiply the counter ions by two
-    # counterions = 0
+    counterions = 0
     print("Counterions:", counterions)
     nz_in = args.neg_valency
 
@@ -58,8 +65,7 @@ def start_sim(tf_sess_config, args):
         # we distribute the extra charge to the mesh points to make the system electroneutral then we recalculate the charge density on surface
         charge_meshpoint = -1.0 * (valency_counterion * counterions) / (number_meshpoints * 2.0)
         total_surface_charge = charge_meshpoint * number_meshpoints  # we recalculate the total charge on teh surface
-        charge_density = (
-                                     total_surface_charge * utility.unitcharge) / surface_area  # in unit of Coulomb per squared meter
+        charge_density = (total_surface_charge * utility.unitcharge) / surface_area  # in unit of Coulomb per squared meter
     mdremote = control.Control(args)
 
     if (mdremote.steps < 100000):  # minimum mdremote.steps is 20000
@@ -121,7 +127,7 @@ if __name__ == "__main__":
     parser.add_argument('-cl', "--confinment-len", action="store", default=3.0, type=float)
     parser.add_argument('-pd', "--pos-diameter", action="store", default=0.714, type=float)
     parser.add_argument('-nd', "--neg-diameter", action="store", default=0.714, type=float)
-    parser.add_argument('-d', "--charge-density", action="store", default=0.00, type=float)
+    parser.add_argument('-d', "--charge-density", action="store", default=-0.0, type=float)
     parser.add_argument("--ein", action="store", default=80, type=float)
     parser.add_argument("--eout", action="store", default=80, type=float)
     # parser.add_argument('-ec', "--extra-compute", action="store", default=10000, type=int)
@@ -132,9 +138,11 @@ if __name__ == "__main__":
     parser.add_argument("--validate", action="store_true")
     parser.add_argument("--random-pos-init", action="store_false")
     parser.add_argument('-bw', "--bin_width", action="store", default=0.05, type=float)
-    parser.add_argument('-fd', "--fraction_diameter", action="store", default=0.02, type=float)
+    parser.add_argument('-fd', "--fraction_diameter", action="store", default=1/28.0, type=float)
     parser.add_argument('-chl', "--chain_length_real", action="store", default=5, type=float)
     parser.add_argument('-Q', "--therm_mass", action="store", default=1, type=float)
+    parser.add_argument('--bx', action="store", default=15.3153, type=float)
+    parser.add_argument('--by', action="store", default=15.3153, type=float)
     args = parser.parse_args()
 
     tfmanip.toggle_xla(args.xla)

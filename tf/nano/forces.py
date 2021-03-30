@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import math
+import os
 
 import common, utility, interface
 
@@ -199,9 +199,9 @@ def for_md_calculate_force(simul_box, ion_dict, charge_meshpoint):
     Updates the forces acting on each ion and returns the updated ion_dict
     """
     # print("\n box dims:", simul_box.lx," y:",simul_box.ly," z:",simul_box.lz)
-    charge_meshpoint = 0.0
+    # charge_meshpoint = 0.0
     with tf.name_scope("for_md_calculate_force"):
-        log_forces = open("output/temp.dat", 'a')
+        #f_log_forces = open(os.path.join(utility.root_path,"all_forces.dat"), 'a')
         pef = _particle_electrostatic_force(simul_box, ion_dict)
         plj = _particle_lj_force(simul_box, ion_dict)
         lw_lj = _left_wall_lj_force(simul_box, ion_dict)
@@ -209,16 +209,16 @@ def for_md_calculate_force(simul_box, ion_dict, charge_meshpoint):
         if abs(charge_meshpoint) != 0:
             erw = _electrostatic_right_wall_force(simul_box, ion_dict)
             elw = _electrostatic_left_wall_force(simul_box, ion_dict)
-            out_pef = tf.Print(pef,
-                               [pef[0], plj[0], lw_lj[0], lw_lj[1], rw_lj[0], erw[0], elw[0]], "::PEF")
+            # out_pef = tf.Print(pef,
+            #                    [pef[0], plj[0], lw_lj[0], lw_lj[1], rw_lj[0], erw[0], elw[0]], "::PEF")
         else:
             erw = 0.0
             elw = 0.0
-            out_pef = tf.Print(pef,
-                               [pef[0], plj[0], lw_lj[0], rw_lj[0], erw, elw ], "::PEF")
+            # out_pef = tf.Print(pef,
+            #                    [pef[0], plj[0], lw_lj[0], rw_lj[0], erw, elw ], "::PEF")
 
         # log_forces.write("pef:"+str(pef.eval(session=tf.compat.v1.Session())) + "\t lw_lj:"+str(lw_lj.eval(session=tf.compat.v1.Session()))+"\t rw_lj:"+str(rw_lj.eval(session=tf.compat.v1.Session()))+"\t erw:"+str(erw.eval(session=tf.compat.v1.Session()))+"\t elw:"+str(elw.eval(session=tf.compat.v1.Session()))+"\t plj:"+str(plj.eval(session=tf.compat.v1.Session()))+"\t")
-        ion_dict[interface.ion_for_str] = plj + lw_lj + rw_lj + erw + elw + out_pef
+        ion_dict[interface.ion_for_str] = plj + lw_lj + rw_lj + erw + elw + pef
         # ion_dict[interface.ion_for_str] = ion_dict[interface.ion_for_str] - ion_dict[interface.ion_for_str]% 0.0001
         return ion_dict
 

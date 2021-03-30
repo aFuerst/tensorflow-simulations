@@ -10,8 +10,8 @@ def compute_n_write_useful_data(ion, real_bath, box, charge_meshpoint):
     potential_energy = energy_functional(box, charge_meshpoint, ion)
     particle_ke = np_kinetic_energy(ion)
     # print("KE:", particle_ke)
-    real_bath_ke = tf.cast(bath_kinetic_energy(real_bath), tf.float64)
-    real_bath_pe = tf.cast(bath_potential_energy(real_bath), tf.float64)
+    real_bath_ke = tf.cast(bath_kinetic_energy(real_bath), common.tf_dtype)
+    real_bath_pe = tf.cast(bath_potential_energy(real_bath), common.tf_dtype)
     # extenergy = particle_ke + real_bath_ke + real_bath_pe + potential_energy
     return particle_ke, potential_energy, real_bath_ke, real_bath_pe
 
@@ -26,32 +26,33 @@ def ion_energy(ion_dict, simul_box):
     """
     charged sheets method is used to compute Coulomb interactions; an Ewald version should be designed to compare and ensure that long-range effects are taken into account in either methods
     """
+    # print("\n ----Begin PE-----")
     with tf.name_scope("particle_electrostatic_energy"):
         distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - ion_dict[interface.ion_pos_str],elems=ion_dict[interface.ion_pos_str])
         z_distances = distances[:, :,-1]  # get z-axis value #TODO: Remove the need for third axis/pulling out z dimension => see if faster way
+        # out_z_distances = tf.Print(z_distances, [z_distances[0], z_distances[1]], "z_distances")
         abs_z_distances = tf.math.abs(z_distances)
         r1 = tf.math.sqrt(0.5 + ((z_distances / simul_box.lx) * (z_distances / simul_box.lx)))
         r2 = tf.math.sqrt(0.25 + ((z_distances / simul_box.lx) * (z_distances / simul_box.lx)))
-        condition = tf.equal(z_distances, 0)
-        r1 = tf.compat.v1.where_v2(condition, z_distances, r1, name="r1_cleanup")
-        r2 = tf.compat.v1.where_v2(condition, z_distances, r2, name="r2_cleanup")
+        # condition = tf.equal(z_distances, 0)
+        # r1 = tf.compat.v1.where_v2(condition, z_distances, r1, name="r1_cleanup")
+        # r2 = tf.compat.v1.where_v2(condition, z_distances, r2, name="r2_cleanup")
         E_z = 4 * tf.math.atan(4 * abs_z_distances * r1 / simul_box.lx)
         fcsh_z = 4 * simul_box.lx * tf.math.log((0.5+r1)/r2) - abs_z_distances * (2* utility.pi - E_z)
+        fcsh_z = tf.compat.v1.where_v2(tf.math.is_inf(fcsh_z, name="check_inf_values"), _tf_zero, fcsh_z, name="filter_infs")
         fcsh_inf = -2 * utility.pi * abs_z_distances
-        # fqq_csh_ion = ion_dict[interface.ion_charges_str] * ()
-        # factor = tf.compat.v1.where_v2(z_distances >= 0.0, _tf_one, _tf_neg_one, name="where_factor")
+        # out_fcsh_inf = tf.Print(fcsh_inf, [fcsh_inf[0], fcsh_inf[1]], "fcsh_inf")
+        # out_fcsh_z = tf.Print(fcsh_z, [fcsh_z[0], fcsh_z[1]], "fcsh_z")
 
-        # THIS HCSH MIGHT BE INCORRECT HENCE (3,3,3) IS CAUSING A TROUBLE
-        # hcsh = (4 / simul_box.lx) * (1 / (r1 * (0.5 + r1)) - 1 / (r2 * r2)) * z_distances + factor * E_z + 16 * abs_z_distances * (
-        #                    simul_box.lx / (simul_box.lx * simul_box.lx + 16 * z_distances * z_distances * r1 * r1)) * (abs_z_distances * z_distances / (simul_box.lx * simul_box.lx * r1) + factor * r1)
-        # hcsh = _zero_nans(hcsh)
         one_over_ep = 1 / ion_dict[interface.ion_epsilon_str]
         q_over_lx_sq = ion_dict[interface.ion_charges_str] / (simul_box.lx * simul_box.lx)
         vec_one_over_ep = common.wrap_vectorize(fn=lambda epsilon_j: epsilon_j + one_over_ep, elems=one_over_ep)
 
-        vec_q_over_lx_sq = common.wrap_vectorize(fn=lambda q_j: ion_dict[interface.ion_charges_str] * q_j,elems=q_over_lx_sq)
+        vec_q_over_lx_sq = common.wrap_vectorize(fn=lambda q_j: ion_dict[interface.ion_charges_str] * q_j, elems = q_over_lx_sq)
         fqq_csh = vec_q_over_lx_sq * 0.5 * vec_one_over_ep * (fcsh_inf - fcsh_z)
+        # out_fqq_csh = tf.Print(fqq_csh, [fqq_csh[0], fqq_csh[1]], "fqq_csh")
         fqq_csh_sum = tf.math.reduce_sum(fqq_csh, axis=1, keepdims=True)
+        # out_fqq_csh_sum = tf.Print(fqq_csh_sum, [fqq_csh_sum[0], fqq_csh_sum[1]], "out_fqq_csh_sum")
 
         wrapped_distances = common.wrap_distances_on_edges(simul_box, distances)
         r = tf.norm(wrapped_distances, ord='euclidean', axis=2, keepdims=True)
@@ -60,13 +61,19 @@ def ion_energy(ion_dict, simul_box):
         b = (0.5 * vec_q_mul * 0.5 * vec_one_over_ep)
         fqq = _zero_nans(b[:, :, tf.newaxis]/r)
         fqq = tf.compat.v1.where_v2(tf.math.is_inf(fqq, name="ccheck_in_values"), _tf_zero, fqq, name="filter_infs")
+        # out_fqq = tf.Print(fqq, [fqq[0], fqq[1]], "fqq")
         fqq_sum = tf.math.reduce_sum(fqq, axis=1, keepdims=False)
+        # out_fqq_sum = tf.Print(fqq_sum, [fqq_sum[0], fqq_sum[1]], "fqq_sum")
         # h1 = tf.math.reduce_sum(a * b[:, :, tf.newaxis], axis=1, keepdims=False,
         #                         name="sum_a_times_b")  # TODO: remove need for newaxis here  #-------------->>>>> change axis here to 0
-        fqq_sum_xy = fqq_sum[:, 0:2]  # TODO: replace this junk with better impl
-        c = fqq_sum[:, 2:3] + fqq_csh_sum
-        con = tf.concat(values=[fqq_sum_xy, c], axis=1, name="x_y_and_c_concatenate")
-        return tf.math.reduce_sum((con) * utility.scalefactor)
+
+        total_ion_ion = fqq_sum + fqq_csh_sum
+        # out_tot = tf.Print(total_ion_ion, [total_ion_ion[0], total_ion_ion[1]], "total")
+        # fqq_sum_xy = fqq_sum[:, 0:2]  # TODO: replace this junk with better impl
+        # c = fqq_sum[:, 2:3] + fqq_csh_sum
+        # con = tf.concat(values=[fqq_sum_xy, c], axis=1, name="x_y_and_c_concatenate")
+        # print("\n -----------------------------")
+        return tf.math.reduce_sum((total_ion_ion) * utility.scalefactor)
 
 
 def _lj_energy(ion_dict, simul_box):
@@ -164,6 +171,7 @@ def _left_wall_columb_energy(ion_dict, simul_box):
 
 def _electrostatic_wall_energy(simul_box, ion_dict, wall_dictionary):
     with tf.name_scope("electrostatic_wall_energy"):
+        # print("\n *********************")
         wall_distances = common.wrap_vectorize(fn=lambda atom_pos: atom_pos - wall_dictionary["posvec"], elems=ion_dict[interface.ion_pos_str])
         wall_z_dist = wall_distances[:, :, -1]  # get z-axis value
         abs_z_distances = tf.math.abs(wall_z_dist)
@@ -193,7 +201,9 @@ def _electrostatic_wall_energy(simul_box, ion_dict, wall_dictionary):
         # a = _zero_nans(wrapped_distances * ((-1.0) / r3))  # r3 can have zeroes in it, so remove the nans that come from div by zero
         b = (0.5 * vec_q_mul * vec_one_over_ep)[:, :, tf.newaxis]
         fqq_ion = _zero_nans(b / r)
-        fqq = tf.math.reduce_sum(fqq_ion, axis=1, keepdims=True)
+        fqq_ion = tf.compat.v1.where_v2(tf.math.is_inf(fqq_ion, name="check_inf_values"), _tf_zero, fqq_ion, name="filter_infs")
+        fqq_ion_out = tf.Print(fqq_ion,[fqq_ion[0], fqq_ion[1]], "fqq_ion")
+        fqq = tf.math.reduce_sum(fqq_ion_out, axis=1, keepdims=True)
         # h1 = tf.math.reduce_sum(a * b[:, :, tf.newaxis], axis=1, keepdims=False,
         #                         name="sum_a_times_b")  # TODO: remove need for newaxis here  #-------------->>>>> change axis here to 0
         # fqq_xy = fqq[:, 0:2]  # TODO: replace this junk with better impl
@@ -231,16 +241,16 @@ def bath_potential_energy(real_bath):
     return pe
 
 def energy_functional(box, charge_meshpoint, ion_dict):
-    coulomb_rightwall = tf.cast(0.0, tf.float64)
-    coulomb_leftwall = tf.cast(0.0, tf.float64)
+    coulomb_rightwall = tf.cast(0.0, common.tf_dtype)
+    coulomb_leftwall = tf.cast(0.0, common.tf_dtype)
     if charge_meshpoint != 0.0:
+        print("\n charge mesh not zero")
         coulomb_rightwall = _right_wall_columb_energy(ion_dict, box)
         coulomb_leftwall = _left_wall_columb_energy(ion_dict, box)
     # print("\n coulumb:",tf.reduce_sum(ion_energy(ion_dict, box)).eval(session=tf.compat.v1.Session()), " lj-ion-ion:", tf.reduce_sum(_lj_energy(ion_dict, box)).eval(session=tf.compat.v1.Session())," lj-left-wall:",tf.reduce_sum(_left_wall_lj_energy(ion_dict, box)).eval(session=tf.compat.v1.Session()))
-    potential = _lj_energy(ion_dict, box) +_left_wall_lj_energy(ion_dict, box) + _right_wall_lj_energy(ion_dict, box) + ion_energy(ion_dict, box) + coulomb_rightwall + coulomb_leftwall
-    totalpotential = tf.reduce_sum(potential)
+    potential =  _lj_energy(ion_dict, box) +_left_wall_lj_energy(ion_dict, box) + _right_wall_lj_energy(ion_dict, box) + ion_energy(ion_dict, box) + coulomb_rightwall + coulomb_leftwall
     total_electrostatics_walls = box.electrostatics_between_walls()
-    totalpotential += total_electrostatics_walls
+    potential += total_electrostatics_walls
 
     return potential  #- (totalpotential%0.0001)
 

@@ -1,5 +1,5 @@
 dcut = 1.122462048						# Cutoff distance in Lennard-Jones = 2 ^ (1/6)
-dcut2 = 1.259921048999999904						# square of Cutoff distance in Lennard-Jones = 2 ^ (1/6)
+dcut2 = 1.259921049					# square of Cutoff distance in Lennard-Jones = 2 ^ (1/6)
 lB_water = 0.714							# Bjerrum length in water, in nanometers
 epsilon_water = 80						# Dielectric constant of water
 room_temperature = 298						# Room temperature in Kelvin

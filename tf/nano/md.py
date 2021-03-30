@@ -36,26 +36,29 @@ def save(i, ion_dict, therms_dict, kinetic_energy, expfac_real, mydir):
 
 def build_graph(simul_box, thermostats, ion_dict, dt:float, sample_iter, bins, charge_meshpoint, initial_ke, initial_pe):
     # TODO: get working with tf.function => faster graph execution with or without?
-    ke_g = initial_ke
+    #ke_p = initial_ke
     pe_g = initial_pe
+
     for i in range(sample_iter):
-        # print("executing VV ")
-        thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_g)
+        # ke_g = ke_p
+        out_ke = tf.Print(ke_placeholder, [ke_placeholder], "ke_placeholder")
+        print(out_ke)
+        thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_placeholder)
         thermostats = thermostat.update_eta(thermostats, dt)
-        expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)  #tf.cast(1.0, tf.float64)
+        expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
         # expfac_real_g =  tf.math.round(expfac_real_g)
-        print("charge meshpoint:", charge_meshpoint)
+        # print("charge meshpoint:", charge_meshpoint)
         ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
         ion_dict = particle.update_position(simul_box, ion_dict, dt)
         ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
         ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-        ke_g = energies.kinetic_energy(ion_dict)
-        pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
+        ke_p = energies.kinetic_energy(ion_dict)
+        # pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
         # out_ke = tf.Print(ke_g, [ke_g], "here here")
         # print("ke_g:", ke_g.eval(session=tf.compat.v1.Session()))
         thermostats = thermostat.update_eta(thermostats, dt)
-        thermostats = thermostat.forward_update_xi(thermostats, dt, ke_g)
-    return thermostats, ion_dict, bin.tf_get_ion_bin_density(simul_box, ion_dict, bins), ke_g, expfac_real_g, pe_g
+        thermostats = thermostat.forward_update_xi(thermostats, dt, ke_p)
+    return thermostats, ion_dict, ke_p, expfac_real_g, pe_g
 
 def save_useful_data(i, therms_out, particle_ke, potential_energy, real_bath_ke, real_bath_pe, path):
     f_therms_file = open(os.path.join(path,"temp.dat"), 'a')
@@ -68,9 +71,9 @@ def save_useful_data(i, therms_out, particle_ke, potential_energy, real_bath_ke,
 
 
 
-def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, charge_meshpoint, bins, initial_pe):
+def loop(simul_box, thermo_g, ion_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, charge_meshpoint, bins, initial_pe):
     # print("graph : loop\n", (ion_g[interface.ion_masses_str]).eval(session=tf.compat.v1.Session()), "\n", bin_density_g, "\n", ke_g, "\n", expfac_real_g)
-    out_exp = tf.Print(expfac_real_g, [expfac_real_g], "expfac_real_g")
+    #out_exp = tf.Print(expfac_real_g, [expfac_real_g], "expfac_real_g")
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
     # ion_dict = forces.for_md_calculate_force(simul_box, ion_dict,charge_meshpoint)
@@ -79,18 +82,19 @@ def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, ther
     # particle_pe = initial_pe #energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
     # ion_g = forces.for_md_calculate_force(ion_g)
     print("\n Running MD Simulation for ",mdremote.steps," steps")
-    for i in range(1,1001):
+    for i in range(1,10001):
         # print("\n entered for of loop()")
         feed = {**planes, **ion_feed, **ft, ke_placeholder:ke_v}
         s = time.time()
-        therms_out, ion_dict_out, (pos_bin_density, neg_bin_density), ke_v, expfac_real_v = session.run([thermo_g, ion_g, bin_density_g, ke_g, out_exp], feed_dict=feed)
+        therms_out, ion_dict_out,  ke_v, expfac_real_v = session.run([thermo_g, ion_g, ke_g, expfac_real_g], feed_dict=feed)
         ion_feed = common.create_feed_dict((ion_dict_out, tf_ion_place))
         ft = thermostat.therms_to_feed_dict(therms_out, thermos_place)
+        # print(ke_v,"ke_v")
         if(i>=0):
             save(i, ion_dict_out, therms_out, ke_v, expfac_real_v, utility.root_path)
             # save_useful_data(i * mdremote.freq, therms_out, ke_v, particle_pe, 0.0, 0.0,
             #                  session)
-
+        # (pos_bin_density, neg_bin_density) = bin.tf_get_ion_bin_density(simul_box, ion_dict, bins)
         if mdremote.validate:
             print("\n Entered Validation:::")
             common.throw_if_bad_boundaries(ion_dict_out[interface.ion_pos_str], simul_box)
@@ -102,16 +106,17 @@ def loop(simul_box, thermo_g, ion_g, bin_density_g, ion_dict, tf_ion_place, ther
         if i==1 or (i*mdremote.freq)%mdremote.extra_compute == 0:
             particle_ke, potential_energy, real_bath_ke, real_bath_pe = energies.compute_n_write_useful_data(ion_dict_out, therms_out, simul_box, charge_meshpoint)
             save_useful_data(i*mdremote.freq, therms_out, particle_ke, potential_energy, real_bath_ke, real_bath_pe, utility.root_path)
-            # print("\n PE:", potential_energy, " KE:", particle_ke)
+            print("iteration {} done".format(i))
 
-        # mdremote.moviestart = 0
-        # moviefreq = 10
-        # if i >= mdremote.moviestart and i % moviefreq == 0:
-        #     make_movie(i, ion_dict_out, simul_box)
+        mdremote.moviestart = 0
+        moviefreq = 50
+        if i >= mdremote.moviestart and i % moviefreq == 0:
+            make_movie(i, ion_dict_out, simul_box)
+
 
         # if (i*mdremote.freq) >= mdremote.hiteqm:
         #     bin.record_densities(i*mdremote.freq, pos_bin_density, neg_bin_density, i, bins, mdremote.writedensity)
-        print("iteration {} done".format(i))
+
         # TODO : average_errorbars_density()
 
 
@@ -138,7 +143,7 @@ def make_movie(num, ion, box):
 
 def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_counterion: int, mdremote, bins):
     # clean()
-    #TODO: better way to initialize forces, without using eval()
+    # TODO: better way to initialize forces, without using eval(), maybe initialize using numpy version. This is because if force is fed to session as an unevaluated tensor, the code throws an exception
     ion_dict[interface.ion_for_str] = (forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint))[interface.ion_for_str].eval(session=tf.compat.v1.Session())
     initial_ke = energies.np_kinetic_energy(ion_dict)
     print("initial KE:",initial_ke)
@@ -152,7 +157,7 @@ def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_count
     # print("tf_dict (s)", time.time() - a)
 
     a = time.time()
-    thermostats_g, ion_dict_g, bin_density_g, ke_g, expfac_real_g, pe_g = build_graph(simul_box, thermos_place, tf_ion_place, mdremote.timestep, mdremote.freq, bins, charge_meshpoint, initial_ke, initial_pe)
+    thermostats_g, ion_dict_g, ke_g, expfac_real_g, pe_g = build_graph(simul_box, thermos_place, tf_ion_place, mdremote.timestep, mdremote.freq, bins, charge_meshpoint, initial_ke, initial_pe)
     # out_pos = tf.Print(ion_dict_g[interface.ion_pos_str],[ion_dict_g[interface.ion_pos_str][0:7]])
     # print("\n Positions: after build_graph:", out_pos)
     # print("graph (s)", time.time() - a)
@@ -161,7 +166,7 @@ def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_count
     # sess.run(thermostats_g, ion_dict_g, bin_density_g, ke_g, expfac_real_g)
     # print("var init (s)", time.time()-tot)
     d = time.time()
-    loop(simul_box, thermostats_g, ion_dict_g, bin_density_g, ion_dict,
+    loop(simul_box, thermostats_g, ion_dict_g, ion_dict,
          ion_place_copy, thermostats, thermo_place_copy, sess, mdremote, ke_g, expfac_real_g, initial_ke, charge_meshpoint, bins, pe_g)
     # print("\n Positions: after build_graph:", ion_dict_g[interface.ion_pos_str])
     f = time.time()

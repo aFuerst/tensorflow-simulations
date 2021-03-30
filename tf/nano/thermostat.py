@@ -45,24 +45,24 @@ def make_thermostats(chain_length_real, ions_count, Q):
     return therms
 
 def update_xi_at(therms, j, dt, ke):
+    # out_ke = tf.Print(ke,[ke],"ke")
+    print("j:",j," dt:",dt," ke:",ke)
+
     if _therm_constants[j]["Q"] == 0:
+        # print("\n Q 0 for j=",j)
         return therms
 
     if (j != 0):
-        therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + \
-        0.5 * dt * (1.0 / _therm_constants[j]["Q"]) * \
-        (_therm_constants[j - 1]["Q"] * therms[j - 1]["xi"] * therms[j - 1]["xi"] - _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"]) * \
-        tf.math.exp(-0.25 * dt * therms[j + 1]["xi"])
-        # therms[j]["xi"] = common.my_tf_round(therms[j]["xi"], 6)
-        # _therm_constants[j]["Q"] = common.my_tf_round(_therm_constants[j]["Q"], 6)
-
+        therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + 0.5 * dt * (
+                1.0 / _therm_constants[j]["Q"]) * (
+                                  _therm_constants[j - 1]["Q"] * therms[j - 1]["xi"] * therms[j - 1]["xi"] -
+                                  _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"]) * tf.math.exp(-0.25 * dt * therms[j + 1]["xi"])
     else:
-        therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + \
-        0.5 * dt * (1.0 / _therm_constants[j]["Q"]) * \
-        (2 * ke - _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"]) * tf.math.exp(-0.25 * dt * therms[j + 1]["xi"])
-        # therms[j]["xi"] = common.my_tf_round(therms[j]["xi"], 6)
-        # _therm_constants[j]["Q"] = common.my_tf_round(_therm_constants[j]["Q"], 6)
-
+        therms[j]["xi"] = therms[j]["xi"] * tf.math.exp(-0.5 * dt * therms[j + 1]["xi"]) + (
+                    0.5 * dt * (1.0 / _therm_constants[j]["Q"]) * (
+                        2 * ke - _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"]) * tf.math.exp(
+                -0.25 * dt * therms[j + 1]["xi"]))
+        #(2 * ke - _therm_constants[j]["dof"] * utility.kB * _therm_constants[j]["T"])
     return therms
 
 def reverse_update_xi(therms, dt: float, ke):
@@ -77,6 +77,13 @@ def forward_update_xi(therms, dt: float, ke):
             therms = update_xi_at(therms, j, dt, ke)
         return therms        
 
+def update_xi(therms, dt, ke, rev):
+    if rev:
+        therms=reverse_update_xi(therms, dt, ke)
+    else:
+        therms=forward_update_xi(therms, dt, ke)
+    return therms
+
 # returns full therms dictionary with updated eta tensor
 def update_eta(therms, dt: float):
     with tf.name_scope("update_eta"):
@@ -87,7 +94,7 @@ def update_eta(therms, dt: float):
         return therms
 
 def calc_exp_factor(therms, dt):
-    return tf.math.exp(-0.5 * dt * therms[0]["xi"])
+    return tf.math.exp((-0.5) * dt * therms[0]["xi"])
 
 def bath_potential_energy(therms):
     with tf.name_scope("bath_potential_energy"):
@@ -104,8 +111,8 @@ def bath_kinetic_energy(therms):
         ke_sum = 0.0
         for j in range(0, len(therms)):
             # print("FOR j:",j," _therm_constants[j][Q]:", _therm_constants[j]["Q"], " T:", _therm_constants[j]["T"], " _therm_constants[j][dof]:", _therm_constants[j]["dof"]," therms[j][xi]",therms[j]["xi"]," therms[j][eta]:", therms[j]["eta"])
-            xi_sq = np.power(therms[j]["xi"], 2)
-            ke_sum = ke_sum + (0.5*_therm_constants[j]["Q"] * xi_sq)
+            # xi_sq = np.power(therms[j]["xi"], 2)
+            ke_sum = ke_sum + (0.5*_therm_constants[j]["Q"] * therms[j]["xi"]*therms[j]["xi"])
             # ke.append(0.5 * _therm_constants[j]["Q"] * therms[j]["xi"] * therms[j]["xi"])
     return ke_sum
 
