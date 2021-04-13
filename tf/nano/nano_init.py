@@ -135,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument('-he', "--hiteqm", action="store", default=100000, type=int)
     parser.add_argument('-t', "--delta-t", action="store", default=0.001, type=float)
     parser.add_argument('-s', "--steps", action="store", default=1000000, type=int)
-    parser.add_argument('-f', "--freq", action="store", default=100, type=int)
+    parser.add_argument('-f', "--freq", action="store", default=1, type=int)
     parser.add_argument('-wd', "--writedensity", action="store", default=100, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     parser.add_argument("--validate", action="store_true")
