@@ -31,7 +31,6 @@ def tf_get_ion_bin_density(box, ion_dict, bins):
     neg_charge_filter = tf.math.logical_not(charge_filter)
     z_pos = ion_dict[interface.ion_pos_str][:, -1]  # get z-axis value
     bin_nums = tf.dtypes.cast((z_pos + 0.5*box.lz) / bins["bin_width"], tf.int32)
-    print("\n box.lz:", box.lz)
     # charge = ion_dict[interface.ion_charges_str]
     pos = ion_dict[interface.ion_pos_str]
     vel = ion_dict["ion_velocities"]
@@ -54,7 +53,7 @@ def record_densities(iter, pos_bin_density, neg_bin_density, no_samples, bins, w
         path = utility.root_path
         outdenp = open(os.path.join(path,"_z+_den-{}.dat".format(iter)), 'w')
         outdenn = open(os.path.join(path,"_z-_den-{}.dat".format(iter)), 'w')
-        for b in range(0, len(mean_pos_bin_density)):
+        for b in range(0, bins["number_of_bins"]):
             outdenp.write(str(utility.unitlength*bins["bin_midpoints"][b])+"\t"+str(mean_pos_bin_density[b])+"\n")
             outdenn.write(str(bins["bin_midpoints"][b]*utility.unitlength)+"\t"+str(mean_neg_bin_density[b])+"\n")
 

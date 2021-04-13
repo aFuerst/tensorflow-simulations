@@ -46,7 +46,7 @@ def make_thermostats(chain_length_real, ions_count, Q):
 
 def update_xi_at(therms, j, dt, ke):
     # out_ke = tf.Print(ke,[ke],"ke")
-    print("j:",j," dt:",dt," ke:",ke)
+    # print("j:",j," dt:",dt," ke:",ke)
 
     if _therm_constants[j]["Q"] == 0:
         # print("\n Q 0 for j=",j)

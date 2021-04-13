@@ -53,13 +53,13 @@ class Interface:
 
         volume_box = self.lx*self.ly*self.lz
 
-        # total_nions_inside = int((concentration * 0.6022) * (volume_box * utility.unitlength * utility.unitlength * utility.unitlength))
-        total_nions_inside = 1
-        # if (total_nions_inside % pz !=0):
-        #     total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
-        #
-        # total_pions_inside = abs(nz) * total_nions_inside / pz
-        total_pions_inside = 1
+        total_nions_inside = int((concentration * 0.6022) * (volume_box * utility.unitlength * utility.unitlength * utility.unitlength))
+        # total_nions_inside = 1
+        if (total_nions_inside % pz !=0):
+            total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
+
+        total_pions_inside = abs(nz) * total_nions_inside / pz
+        # total_pions_inside = 1
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
         print("total_saltions_inside", total_saltions_inside)
 
@@ -134,7 +134,6 @@ class Interface:
                         if len(ion_pos) < total_saltions_inside:
                             z = (-self.lz/2 + (0.5 * bigger_ion_diameter)) + k * bigger_ion_diameter
                             posvec = np.array([x,y,z])
-                            print("\n lx:",self.lx," ly:",self.ly," big_diam:", bigger_ion_diameter," posvec:",posvec)
                             if (x > ((self.lx/2)-(0.5 * bigger_ion_diameter)) or y > ((self.ly/2)-(0.5 * bigger_ion_diameter)) or z > ((self.lz/2)-(0.5 * bigger_ion_diameter))):
                                 continue
                             if (len(ion_pos) < counterions):
