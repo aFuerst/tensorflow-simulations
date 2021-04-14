@@ -5,7 +5,6 @@ import utility, bin, forces, thermostat, velocities, particle, interface, energi
 
 ke_placeholder = tf.compat.v1.placeholder(shape=(), dtype=common.tf_dtype, name="kinetic_energy_place")
 
-
 def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_counterion: int, mdremote, bins):
     # TODO: better way to initialize forces, without using eval(), maybe initialize using numpy version.
     #  This is because if force is fed to session as an unevaluated tensor, the code throws an exception
@@ -13,7 +12,7 @@ def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_count
         interface.ion_for_str].eval(session=tf.compat.v1.Session())
     initial_ke = energies.np_kinetic_energy(ion_dict)
     print("initial KE:", initial_ke)
-    initial_pe = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
+    # initial_pe = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
     sess = tf.compat.v1.Session()
     sess.as_default()
     a = time.time()
@@ -21,7 +20,7 @@ def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_count
     thermos_place, thermo_place_copy = thermostat.get_placeholders(thermostats)
     # print("tf_dict (s)", time.time() - a)
     thermostats_g, ion_dict_g, ke_g, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density_g, neg_bin_density_g = build_graph(
-        simul_box, thermos_place, tf_ion_place, mdremote.timestep, mdremote.freq, bins, charge_meshpoint)
+        simul_box, thermos_place, tf_ion_place, mdremote.timestep, mdremote, bins, charge_meshpoint)
     sess.run(tf.compat.v1.global_variables_initializer())
     loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermostats_g, ion_dict_g, ion_dict,
          ion_place_copy, thermostats, thermo_place_copy, sess, mdremote, ke_g, expfac_real_g, initial_ke, bins,
@@ -51,23 +50,24 @@ def save(i, ion_dict, therms_dict, kinetic_energy, expfac_real, mydir):
         f.write(str(i) + "\t" + str(expfac_real) + "\n")
 
 
-def build_graph(simul_box, thermostats, ion_dict, dt:float, sample_iter, bins, charge_meshpoint):
+def build_graph(simul_box, thermostats, ion_dict, dt:float, mdremote, bins, charge_meshpoint):
     # TODO: get working with tf.function => faster graph execution with or without?
-    for i in range(sample_iter):
-        thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_placeholder)
-        thermostats = thermostat.update_eta(thermostats, dt)
-        expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
-        ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-        ion_dict = particle.update_position(simul_box, ion_dict, dt)
-        ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
-        ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-        ke_p = energies.kinetic_energy(ion_dict)
-        thermostats = thermostat.update_eta(thermostats, dt)
-        thermostats = thermostat.forward_update_xi(thermostats, dt, ke_p)
-        (pos_bin_density, neg_bin_density) = bin.tf_get_ion_bin_density(simul_box, ion_dict, bins)
-        pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
-        bath_ke_g = energies.bath_kinetic_energy(thermostats)
-        bath_pe_g = energies.bath_potential_energy(thermostats)
+    # for i in range(mdremote.freq):
+    print("inside for loop of build graph")
+    thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_placeholder)
+    thermostats = thermostat.update_eta(thermostats, dt)
+    expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
+    ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
+    ion_dict = particle.update_position(simul_box, ion_dict, dt)
+    ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
+    ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
+    ke_p = energies.kinetic_energy(ion_dict)
+    thermostats = thermostat.update_eta(thermostats, dt)
+    thermostats = thermostat.forward_update_xi(thermostats, dt, ke_p)
+    (pos_bin_density, neg_bin_density) = bin.tf_get_ion_bin_density(simul_box, ion_dict, bins)
+    pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
+    bath_ke_g = energies.bath_kinetic_energy(thermostats)
+    bath_pe_g = energies.bath_potential_energy(thermostats)
     return thermostats, ion_dict, ke_p, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density, neg_bin_density
 
 def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_pe, path):
@@ -103,19 +103,18 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
                 raise Exception("Temperature too high! was '{}'".format(2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)))
 
         # compute_n_write_useful_data
-        mdremote.extra_compute = 10
-        if i==1 or (i*mdremote.freq)%mdremote.extra_compute == 0:
-            save_useful_data(i*mdremote.freq, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
-        print("iteration {} done".format(i*mdremote.freq))
+        if i==1 or i%mdremote.extra_compute == 0:
+            save_useful_data(i, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
+        print("iteration {} done".format(i))
 
         # generate movie file
         # moviestart = 1
-        # if i * mdremote.freq >= moviestart and (i * mdremote.freq) % mdremote.moviefreq == 0:
+        # if i >= moviestart and i % mdremote.moviefreq == 0:
         #     make_movie(i, ion_dict_out, simul_box)
 
         # Write density profile
-        # if (i*mdremote.freq) >= mdremote.hiteqm and (i*mdremote.freq)%1000000: #if (i*mdremote.freq) >= mdremote.hiteqm:
-        #     bin.record_densities(i * mdremote.freq, pos_bin_density_v, neg_bin_density_v, i, bins, mdremote.writedensity)
+        if i >= mdremote.hiteqm and i%mdremote.writedensity==0: #if (i*mdremote.freq) >= mdremote.hiteqm:
+            bin.record_densities(i, pos_bin_density_v, neg_bin_density_v, i//mdremote.writedensity, bins, mdremote.writedensity)
         # TODO : average_errorbars_density()
 
 def make_movie(num, ion, box):

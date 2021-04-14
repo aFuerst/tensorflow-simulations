@@ -79,16 +79,6 @@ def start_sim(tf_sess_config, args):
         mdremote.extra_compute = int(mdremote.steps * 0.01)
         mdremote.moviefreq = int(mdremote.steps * 0.001)
 
-    # if mdremote.extra_compute == 0:
-    #     mdremote.extra_compute = 1
-    #
-    # if mdremote.writedensity == 0:
-    #     mdremote.writedensity = 1
-    #
-    # if mdremote.hiteqm == 0:
-    #     mdremote.hiteqm = 1
-    # if mdremote.moviefreq == 0:
-    #     mdremote.moviefreq = 1
     T = 1
     simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in,
                                     salt_valency_out=0, bx=bx / utility.unitlength, by=by / utility.unitlength,
@@ -134,8 +124,8 @@ if __name__ == "__main__":
     parser.add_argument('-mf', "--moviefreq", action="store", default=10000, type=int)
     parser.add_argument('-he', "--hiteqm", action="store", default=100000, type=int)
     parser.add_argument('-t', "--delta-t", action="store", default=0.001, type=float)
-    parser.add_argument('-s', "--steps", action="store", default=1000000, type=int)
-    parser.add_argument('-f', "--freq", action="store", default=1, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=1000, type=int)
+    # parser.add_argument('-f', "--freq", action="store", default=1, type=int)
     parser.add_argument('-wd', "--writedensity", action="store", default=100, type=int)
     parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
     parser.add_argument("--validate", action="store_true")
