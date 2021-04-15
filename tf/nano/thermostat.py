@@ -94,7 +94,8 @@ def update_eta(therms, dt: float):
         return therms
 
 def calc_exp_factor(therms, dt):
-    return tf.math.exp((-0.5) * dt * therms[0]["xi"])
+    with tf.name_scope("calc_exp_factor"):
+        return tf.math.exp((-0.5) * dt * therms[0]["xi"])
 
 def bath_potential_energy(therms):
     with tf.name_scope("bath_potential_energy"):

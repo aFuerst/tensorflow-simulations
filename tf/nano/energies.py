@@ -177,23 +177,26 @@ def np_kinetic_energy(ion_dict):
     return np.sum(ke, keepdims=False)
 
 def bath_kinetic_energy(real_bath):
-    ke = thermostat.bath_kinetic_energy(real_bath)
-    return ke #tf.reduce_sum(ke, axis=0)
+    with tf.name_scope("calc_bath_KE"):
+        ke = thermostat.bath_kinetic_energy(real_bath)
+        return ke #tf.reduce_sum(ke, axis=0)
 
 def bath_potential_energy(real_bath):
-    pe = thermostat.bath_potential_energy(real_bath)
-    return pe
+    with tf.name_scope("calc_bath_PE"):
+        pe = thermostat.bath_potential_energy(real_bath)
+        return pe
 
 def energy_functional(box, charge_meshpoint, ion_dict):
-    coulomb_rightwall = tf.cast(0.0, common.tf_dtype)
-    coulomb_leftwall = tf.cast(0.0, common.tf_dtype)
-    if charge_meshpoint != 0.0:
-        print("\n charge mesh not zero")
-        coulomb_rightwall = _right_wall_columb_energy(ion_dict, box)
-        coulomb_leftwall = _left_wall_columb_energy(ion_dict, box)
-    potential =  _lj_energy(ion_dict, box) +_left_wall_lj_energy(ion_dict, box) + _right_wall_lj_energy(ion_dict, box) + ion_energy(ion_dict, box) + coulomb_rightwall + coulomb_leftwall
-    total_electrostatics_walls = box.electrostatics_between_walls()
-    potential += total_electrostatics_walls
+    with tf.name_scope("calc_potential_energy"):
+        coulomb_rightwall = tf.cast(0.0, common.tf_dtype)
+        coulomb_leftwall = tf.cast(0.0, common.tf_dtype)
+        if charge_meshpoint != 0.0:
+            print("\n charge mesh not zero")
+            coulomb_rightwall = _right_wall_columb_energy(ion_dict, box)
+            coulomb_leftwall = _left_wall_columb_energy(ion_dict, box)
+        potential =  _lj_energy(ion_dict, box) +_left_wall_lj_energy(ion_dict, box) + _right_wall_lj_energy(ion_dict, box) + ion_energy(ion_dict, box) + coulomb_rightwall + coulomb_leftwall
+        total_electrostatics_walls = box.electrostatics_between_walls()
+        potential += total_electrostatics_walls
 
-    return potential  #- (totalpotential%0.0001)
+        return potential  #- (totalpotential%0.0001)
 

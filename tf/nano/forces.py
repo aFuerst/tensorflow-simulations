@@ -176,7 +176,7 @@ def for_md_calculate_force(simul_box, ion_dict, charge_meshpoint):
     """
     Updates the forces acting on each ion and returns the updated ion_dict
     """
-    with tf.name_scope("for_md_calculate_force"):
+    with tf.name_scope("calculate_force"):
         pef = _particle_electrostatic_force(simul_box, ion_dict)
         plj = _particle_lj_force(simul_box, ion_dict)
         lw_lj = _left_wall_lj_force(simul_box, ion_dict)

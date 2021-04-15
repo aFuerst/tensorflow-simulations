@@ -27,22 +27,23 @@ def make_bins(box, set_bin_width):
 
 
 def tf_get_ion_bin_density(box, ion_dict, bins):
-    charge_filter = tf.math.greater(ion_dict[interface.ion_charges_str], 0)
-    neg_charge_filter = tf.math.logical_not(charge_filter)
-    z_pos = ion_dict[interface.ion_pos_str][:, -1]  # get z-axis value
-    bin_nums = tf.dtypes.cast((z_pos + 0.5*box.lz) / bins["bin_width"], tf.int32)
-    # charge = ion_dict[interface.ion_charges_str]
-    pos = ion_dict[interface.ion_pos_str]
-    vel = ion_dict["ion_velocities"]
-    force = ion_dict[interface.ion_for_str]
+    with tf.name_scope("calc_bin_density"):
+        charge_filter = tf.math.greater(ion_dict[interface.ion_charges_str], 0)
+        neg_charge_filter = tf.math.logical_not(charge_filter)
+        z_pos = ion_dict[interface.ion_pos_str][:, -1]  # get z-axis value
+        bin_nums = tf.dtypes.cast((z_pos + 0.5*box.lz) / bins["bin_width"], tf.int32)
+        # charge = ion_dict[interface.ion_charges_str]
+        pos = ion_dict[interface.ion_pos_str]
+        vel = ion_dict["ion_velocities"]
+        force = ion_dict[interface.ion_for_str]
 
-    # # print("\n box.lz:",box.lz*0.5," bin width:", bin_width, " number of bins:", number_of_bins)
-    # out_bin_nums = tf.Print(bin_nums, [vel[0], vel[1], pos[0], pos[1], force[0], force[1], ], " force")
-    pos_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, charge_filter), minlength=number_of_bins, maxlength=number_of_bins, dtype=common.tf_dtype) / bin_volume
-    neg_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, neg_charge_filter), minlength=number_of_bins, maxlength=number_of_bins, dtype=common.tf_dtype) / bin_volume
-    # print("\n pos_bin_density:", pos_bin_density)
-    # out_pos_bin_density = tf.Print(pos_bin_density, [pos_bin_density[9], pos_bin_density[28]],"out_pos_bin_density")
-    return pos_bin_density, neg_bin_density
+        # # print("\n box.lz:",box.lz*0.5," bin width:", bin_width, " number of bins:", number_of_bins)
+        # out_bin_nums = tf.Print(bin_nums, [vel[0], vel[1], pos[0], pos[1], force[0], force[1], ], " force")
+        pos_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, charge_filter), minlength=number_of_bins, maxlength=number_of_bins, dtype=common.tf_dtype) / bin_volume
+        neg_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, neg_charge_filter), minlength=number_of_bins, maxlength=number_of_bins, dtype=common.tf_dtype) / bin_volume
+        # print("\n pos_bin_density:", pos_bin_density)
+        # out_pos_bin_density = tf.Print(pos_bin_density, [pos_bin_density[9], pos_bin_density[28]],"out_pos_bin_density")
+        return pos_bin_density, neg_bin_density
 
 def record_densities(iter, pos_bin_density, neg_bin_density, no_samples, bins, writedensity):
     pos_bin_density_records.append(pos_bin_density)
