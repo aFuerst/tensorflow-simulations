@@ -86,6 +86,8 @@ def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_p
 
 
 def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, bins, pos_bin_density_g, neg_bin_density_g):
+    if os.path.exists("output/logs/"):
+        shutil.rmtree("output/logs/")
     profile = True
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
@@ -112,9 +114,11 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
             from tensorflow.python.client import timeline
             tl = timeline.Timeline(run_metadata.step_stats)
             ctf = tl.generate_chrome_trace_format()
-            writer.add_run_metadata(run_metadata, 'step%d' % i)
-            with open(os.path.join("output/logs/", "{}-timeline.json".format(1+i)), 'w') as f:
+            # writer.add_run_metadata(run_metadata, 'step%d' % i)
+            with open(os.path.join("output/logs/", "{}-profile_timeline.json".format(i)), 'w') as f:
                 f.write(ctf)
+
+
         # compute_n_write_useful_data
         #if i==1 or i%mdremote.extra_compute == 0:
         #    save_useful_data(i, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
