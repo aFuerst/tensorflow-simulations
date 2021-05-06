@@ -101,12 +101,12 @@ def start_sim(tf_sess_config, args):
     ion_dict = velocities.initialize_particle_velocities(ion_dict, thermos)
     ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
 
-    md.run_md_sim(simul_box, thermos, ion_dict, charge_meshpoint, valency_counterion, mdremote, bins)
+    md.run_md_sim(simul_box, thermos, ion_dict, charge_meshpoint, valency_counterion, mdremote, bins, tf_sess_config)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', "--cpu", action="store_true")
+    parser.add_argument('-c', "--cpu", action="store_true", default=0)
     parser.add_argument('-v', "--verbose", action="store_true")
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
@@ -124,10 +124,10 @@ if __name__ == "__main__":
     parser.add_argument('-mf', "--moviefreq", action="store", default=10000, type=int)
     parser.add_argument('-he', "--hiteqm", action="store", default=100000, type=int)
     parser.add_argument('-t', "--delta-t", action="store", default=0.001, type=float)
-    parser.add_argument('-s', "--steps", action="store", default=1000, type=int)
-    # parser.add_argument('-f', "--freq", action="store", default=1, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=5000000, type=int)
+    parser.add_argument('-f', "--freq", action="store", default=100, type=int)
     parser.add_argument('-wd', "--writedensity", action="store", default=100000, type=int)
-    parser.add_argument("--threads", action="store", default=os.cpu_count(), type=int)
+    parser.add_argument('-th', "--threads", action="store", default=os.cpu_count(), type=int)
     parser.add_argument("--validate", action="store_true")
     parser.add_argument("--random-pos-init", action="store_false")
     parser.add_argument('-bw', "--bin_width", action="store", default=0.05, type=float)

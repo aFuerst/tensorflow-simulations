@@ -17,6 +17,7 @@ def _zero_nans(tensor):
     with tf.name_scope("zero_nans"):
         return tf.compat.v1.where_v2(tf.math.is_nan(tensor), _tf_zero, tensor, name="zero_nans_where")
 
+
 def _particle_electrostatic_force(simul_box, ion_dict):
     """
     force on the particles (electrostatic)

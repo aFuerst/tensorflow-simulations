@@ -5,11 +5,17 @@ import tensorboard
 
 ke_placeholder = tf.compat.v1.placeholder(shape=(), dtype=common.tf_dtype, name="kinetic_energy_place")
 
-def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_counterion: int, mdremote, bins):
+def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_counterion: int, mdremote, bins, tf_sess_config):
+    # if os.path.exists("output/logs/"):
+    #     shutil.rmtree("output/logs/")
     print("\n os.cpu_count():", str(os.cpu_count()))
     initial_ke = energies.np_kinetic_energy(ion_dict)
     print("initial KE:", initial_ke)
-    sess = tf.compat.v1.Session()
+    # config = tf.compat.v1.ConfigProto()
+    # config.intra_op_parallelism_threads = 1
+    # config.inter_op_parallelism_threads = 1
+    # tf.session(config=config)
+    sess = tf.compat.v1.Session(config=tf_sess_config)
     sess.as_default()
     a = time.time()
     # TODO: better way to initialize forces, without using eval(), maybe initialize using numpy version.
@@ -26,11 +32,11 @@ def run_md_sim(simul_box, thermostats, ion_dict, charge_meshpoint, valency_count
          pos_bin_density_g, neg_bin_density_g)
 
 
-def clean():
-    if os.path.exists("output/"):
-        shutil.rmtree("output/")
-    if not os.path.exists("output/"):
-        os.mkdir("output/")
+# def clean():
+#     if os.path.exists("output/"):
+#         shutil.rmtree("output/")
+#     if not os.path.exists("output/"):
+#         os.mkdir("output/")
 
 def save(i, ion_dict, therms_dict, kinetic_energy, expfac_real, mydir):
     with open(os.path.join(mydir, 'forces.dat'), 'a') as force_file:
@@ -48,27 +54,27 @@ def save(i, ion_dict, therms_dict, kinetic_energy, expfac_real, mydir):
     with open(os.path.join(mydir, "expfac_real"), mode="a") as f:
         f.write(str(i) + "\t" + str(expfac_real) + "\n")
 
-
 def build_graph(simul_box, thermostats, ion_dict, dt:float, mdremote, bins, charge_meshpoint):
     # with tf.name_scope("velocity_verlet"):
     # TODO: get working with tf.function => faster graph execution with or without?
-    # for i in range(mdremote.freq):
-    print("inside for loop of build graph")
-    thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_placeholder)
-    thermostats = thermostat.update_eta(thermostats, dt)
-    expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
-    ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-    ion_dict = particle.update_position(simul_box, ion_dict, dt)
-    ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
-    ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-    ke_p = energies.kinetic_energy(ion_dict)
-    thermostats = thermostat.update_eta(thermostats, dt)
-    thermostats = thermostat.forward_update_xi(thermostats, dt, ke_p)
+    ke_g = ke_placeholder
+    for i in range(0, mdremote.freq):
+        # print("inside for loop of build graph")
+        thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_g)
+        thermostats = thermostat.update_eta(thermostats, dt)
+        expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
+        ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
+        ion_dict = particle.update_position(simul_box, ion_dict, dt)
+        ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
+        ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
+        ke_g = energies.kinetic_energy(ion_dict)
+        thermostats = thermostat.update_eta(thermostats, dt)
+        thermostats = thermostat.forward_update_xi(thermostats, dt, ke_g)
     (pos_bin_density, neg_bin_density) = bin.tf_get_ion_bin_density(simul_box, ion_dict, bins)
     pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
     bath_ke_g = energies.bath_kinetic_energy(thermostats)
     bath_pe_g = energies.bath_potential_energy(thermostats)
-    return thermostats, ion_dict, ke_p, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density, neg_bin_density
+    return thermostats, ion_dict, ke_g, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density, neg_bin_density
 
 def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_pe, path):
     f_therms_file = open(os.path.join(path,"temp.dat"), 'a')
@@ -86,8 +92,7 @@ def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_p
 
 
 def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, bins, pos_bin_density_g, neg_bin_density_g):
-    if os.path.exists("output/logs/"):
-        shutil.rmtree("output/logs/")
+
     profile = True
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
@@ -99,8 +104,8 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
     if profile:
         run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
         run_metadata = tf.compat.v1.RunMetadata()
-    for i in range(1, (mdremote.steps+1)):
-        feed = {**planes, **ion_feed, **ft, ke_placeholder:ke_v}
+    for i in range(1, (mdremote.steps//mdremote.freq + 1)):
+        feed = {**planes, **ion_feed, **ft, ke_placeholder: ke_v}
         s = time.time()
         therms_out, ion_dict_out, ke_v, pe_v, bath_ke_v, bath_pe_v, expfac_real_v, pos_bin_density_v, neg_bin_density_v = session.run([thermo_g, ion_g, ke_g, pe_g, bath_ke_g, bath_pe_g, expfac_real_g, pos_bin_density_g, neg_bin_density_g], feed_dict=feed, options=run_options, run_metadata=run_metadata)
         ion_feed = common.create_feed_dict((ion_dict_out, tf_ion_place))
@@ -114,15 +119,14 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
             from tensorflow.python.client import timeline
             tl = timeline.Timeline(run_metadata.step_stats)
             ctf = tl.generate_chrome_trace_format()
-            # writer.add_run_metadata(run_metadata, 'step%d' % i)
             with open(os.path.join("output/logs/", "{}-profile_timeline.json".format(i)), 'w') as f:
                 f.write(ctf)
 
 
         # compute_n_write_useful_data
-        #if i==1 or i%mdremote.extra_compute == 0:
+        # if i >= 0 and (i*mdremote.freq) % mdremote.extra_compute == 0:
         #    save_useful_data(i, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
-        #print("iteration {} done".format(i))
+        print("iteration {} done".format(i))
 
         # generate movie file
         # moviestart = 1
@@ -130,7 +134,8 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
         #     make_movie(i, ion_dict_out, simul_box)
 
         # Write density profile
-        # if i >= mdremote.hiteqm and i%mdremote.writedensity==0: #if (i*mdremote.freq) >= mdremote.hiteqm:
+        #if i >= mdremote.hiteqm and i%mdremote.writedensity==0: #if (i*mdremote.freq) >= mdremote.hiteqm:
+        # if i==5000000:
         #     bin.record_densities(i, pos_bin_density_v, neg_bin_density_v, i//mdremote.writedensity, bins, mdremote.writedensity)
         # TODO : average_errorbars_density()
     print("\n Simulation ends!!")
