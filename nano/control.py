@@ -6,7 +6,7 @@ class Control:
         self.writedensity=args.writedensity 		# write the density files
         self.moviefreq=args.moviefreq		# frequency of making movie files        self.verbose=args.verbose
         self.timestep=args.delta_t	# timestep used in molecular dynamics
-        self.steps=args.steps
+        self.steps=args.steps 
         self.freq=args.freq			# number of steps in molecular dynamics
         self.validate=args.validate
         self.ein=args.ein

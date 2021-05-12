@@ -6,13 +6,12 @@ def toggle_xla(xla):
         tf.config.optimizer.set_jit(xla)
 
 def toggle_cpu(cpu, thread_count):
+    print("\n os.cpu_count():",str(os.cpu_count()))
     if cpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
         print("\n :::: thread count is:", thread_count)
         tf.config.threading.set_inter_op_parallelism_threads(thread_count)
         tf.config.threading.set_intra_op_parallelism_threads(thread_count)
-        print("config.intra_op_parallelism_threads =", tf.config.intra_op_parallelism_threads)
-        print("config.inter_op_parallelism_threads =", tf.config.inter_op_parallelism_threads)
         return tf.compat.v1.ConfigProto(intra_op_parallelism_threads=thread_count, inter_op_parallelism_threads=thread_count)
     return None
 

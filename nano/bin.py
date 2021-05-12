@@ -45,18 +45,30 @@ def tf_get_ion_bin_density(box, ion_dict, bins):
         # out_pos_bin_density = tf.Print(pos_bin_density, [pos_bin_density[9], pos_bin_density[28]],"out_pos_bin_density")
         return pos_bin_density, neg_bin_density
 
-def record_densities(iter, pos_bin_density, neg_bin_density, no_samples, bins, writedensity):
+def record_densities(iter, pos_bin_density, neg_bin_density, no_samples, bins, mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density):
     pos_bin_density_records.append(pos_bin_density)
     neg_bin_density_records.append(neg_bin_density)
-    mean_pos_bin_density = np.sum(pos_bin_density_records, axis=0, keepdims=False) / no_samples
-    mean_neg_bin_density = np.sum(neg_bin_density_records, axis=0, keepdims=False) / no_samples
-    if iter % writedensity==0:
-        path = utility.root_path
-        outdenp = open(os.path.join(path,"_z+_den-{}.dat".format(iter)), 'w')
-        outdenn = open(os.path.join(path,"_z-_den-{}.dat".format(iter)), 'w')
-        for b in range(0, bins["number_of_bins"]):
-            outdenp.write(str(utility.unitlength*bins["bin_midpoints"][b])+"\t"+str(mean_pos_bin_density[b])+"\n")
-            outdenn.write(str(bins["bin_midpoints"][b]*utility.unitlength)+"\t"+str(mean_neg_bin_density[b])+"\n")
+    # print("pos_bin_density:", pos_bin_density)
+    for i in range(0, len(mean_pos_density)):
+        mean_pos_density[i] += pos_bin_density[i]
+    for i in range(0, len(mean_neg_density)):
+        mean_neg_density[i] += neg_bin_density[i]
+    for i in range(0, len(pos_bin_density)):
+        mean_sq_pos_density[i] += pos_bin_density[i]*pos_bin_density[i]
+    for i in range(0, len(neg_bin_density)):
+        mean_sq_neg_density[i] += neg_bin_density[i]*neg_bin_density[i]
+
+    # mean_pos_bin_density = np.sum(pos_bin_density_records, axis=0, keepdims=False) / no_samples
+    # mean_neg_bin_density = np.sum(neg_bin_density_records, axis=0, keepdims=False) / no_samples
+    #if iter % writedensity==0:
+    path = utility.root_path
+    outdenp = open(os.path.join(path,"_z+_den-{}.dat".format(iter)), 'w')
+    outdenn = open(os.path.join(path,"_z-_den-{}.dat".format(iter)), 'w')
+    for b in range(0, bins["number_of_bins"]):
+        outdenp.write(str(utility.unitlength*bins["bin_midpoints"][b])+"\t"+str(mean_pos_density[b]/no_samples)+"\n")
+        outdenn.write(str(bins["bin_midpoints"][b]*utility.unitlength)+"\t"+str(mean_neg_density[b]/no_samples)+"\n")
+
+    return mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density
 
 
 # if __name__ == "__main__":

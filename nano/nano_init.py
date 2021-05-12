@@ -70,14 +70,14 @@ def start_sim(tf_sess_config, args):
 
     if (mdremote.steps < 100000):  # minimum mdremote.steps is 20000
         mdremote.hiteqm = int(mdremote.steps * 0.1)
-        mdremote.writedensity = int(mdremote.steps * 0.1)
-        mdremote.extra_compute = int(mdremote.steps * 0.01)
-        mdremote.moviefreq = int(mdremote.steps * 0.001)
+        #mdremote.writedensity = int(mdremote.steps * 0.1)
+        #mdremote.extra_compute = int(mdremote.steps * 0.01)
+        #mdremote.moviefreq = int(mdremote.steps * 0.001)
     else:
         mdremote.hiteqm = int(mdremote.steps * 0.2)
-        mdremote.writedensity = int(mdremote.steps * 0.1)
-        mdremote.extra_compute = int(mdremote.steps * 0.01)
-        mdremote.moviefreq = int(mdremote.steps * 0.001)
+        #mdremote.writedensity = int(mdremote.steps * 0.1)
+        #mdremote.extra_compute = int(mdremote.steps * 0.01)
+        #mdremote.moviefreq = int(mdremote.steps * 0.001)
 
     T = 1
     simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in,
@@ -101,12 +101,12 @@ def start_sim(tf_sess_config, args):
     ion_dict = velocities.initialize_particle_velocities(ion_dict, thermos)
     ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
 
-    md.run_md_sim(simul_box, thermos, ion_dict, charge_meshpoint, valency_counterion, mdremote, bins, tf_sess_config)
+    md.run_md_sim(tf_sess_config, simul_box, thermos, ion_dict, charge_meshpoint, valency_counterion, mdremote, bins)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', "--cpu", action="store_true", default=0)
+    parser.add_argument('-c', "--cpu", action="store_true")
     parser.add_argument('-v', "--verbose", action="store_true")
     parser.add_argument('-x', "--xla", action="store_true")
     parser.add_argument('-r', "--prof", action="store_true")
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     parser.add_argument('-mf', "--moviefreq", action="store", default=10000, type=int)
     parser.add_argument('-he', "--hiteqm", action="store", default=100000, type=int)
     parser.add_argument('-t', "--delta-t", action="store", default=0.001, type=float)
-    parser.add_argument('-s', "--steps", action="store", default=5000000, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=1000000, type=int)
     parser.add_argument('-f', "--freq", action="store", default=100, type=int)
     parser.add_argument('-wd', "--writedensity", action="store", default=100000, type=int)
     parser.add_argument('-th', "--threads", action="store", default=os.cpu_count(), type=int)
