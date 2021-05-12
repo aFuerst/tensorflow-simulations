@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import tensorflow as tf
 import time, os, shutil, datetime
 import utility, bin, forces, thermostat, velocities, particle, interface, energies, common, control
@@ -101,7 +102,7 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
     ion_feed = common.create_feed_dict((ion_dict, tf_ion_place))
     ft = thermostat.therms_to_feed_dict(thermostats, thermos_place)
     print("\n Running MD Simulation for ",mdremote.steps," steps")
-    for i in range(1, (mdremote.steps//mdremote.freq + 1)):
+    for i in tqdm(range(1, (mdremote.steps//mdremote.freq + 1))):
         feed = {**planes, **ion_feed, **ft, ke_placeholder:ke_v}
         s = time.time()
         therms_out, ion_dict_out, ke_v, pe_v, bath_ke_v, bath_pe_v, expfac_real_v, pos_bin_density_v, neg_bin_density_v = session.run([thermo_g, ion_g, ke_g, pe_g, bath_ke_g, bath_pe_g, expfac_real_g, pos_bin_density_g, neg_bin_density_g], feed_dict=feed)
@@ -116,7 +117,7 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
         # compute_n_write_useful_data
         if (i*mdremote.freq)==1 or (i*mdremote.freq)%mdremote.extra_compute == 0:
             save_useful_data(i*mdremote.freq, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
-        print("iteration {} done".format(i))
+        #print("iteration {} done".format(i))
 
         # generate movie file
         # moviestart = 1
