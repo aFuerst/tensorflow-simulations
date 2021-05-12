@@ -55,24 +55,26 @@ def save(i, ion_dict, therms_dict, kinetic_energy, expfac_real, mydir):
 
 
 def build_graph(simul_box, thermostats, ion_dict, dt:float, mdremote, bins, charge_meshpoint):
+    # with tf.name_scope("velocity_verlet"):
     # TODO: get working with tf.function => faster graph execution with or without?
-    # for i in range(mdremote.freq):
-    print("inside for loop of build graph")
-    thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_placeholder)
-    thermostats = thermostat.update_eta(thermostats, dt)
-    expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
-    ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-    ion_dict = particle.update_position(simul_box, ion_dict, dt)
-    ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
-    ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-    ke_p = energies.kinetic_energy(ion_dict)
-    thermostats = thermostat.update_eta(thermostats, dt)
-    thermostats = thermostat.forward_update_xi(thermostats, dt, ke_p)
+    ke_g = ke_placeholder
+    for i in range(0, mdremote.freq):
+        # print("inside for loop of build graph")
+        thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_g)
+        thermostats = thermostat.update_eta(thermostats, dt)
+        expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
+        ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
+        ion_dict = particle.update_position(simul_box, ion_dict, dt)
+        ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
+        ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
+        ke_g = energies.kinetic_energy(ion_dict)
+        thermostats = thermostat.update_eta(thermostats, dt)
+        thermostats = thermostat.forward_update_xi(thermostats, dt, ke_g)
     (pos_bin_density, neg_bin_density) = bin.tf_get_ion_bin_density(simul_box, ion_dict, bins)
     pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
     bath_ke_g = energies.bath_kinetic_energy(thermostats)
     bath_pe_g = energies.bath_potential_energy(thermostats)
-    return thermostats, ion_dict, ke_p, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density, neg_bin_density
+    return thermostats, ion_dict, ke_g, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density, neg_bin_density
 
 def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_pe, path):
     f_therms_file = open(os.path.join(path,"temp.dat"), 'a')
