@@ -21,15 +21,19 @@ def run_md_sim(config, simul_box, thermostats, ion_dict, charge_meshpoint, valen
     sess = tf.compat.v1.Session(config=config)
     sess.as_default()
     a = time.time()
-    tf_ion_place, ion_place_copy = common.make_tf_placeholder_of_dict(ion_dict)
-    thermos_place, thermo_place_copy = thermostat.get_placeholders(thermostats)
+    # tf_ion_place, ion_place_copy = common.make_tf_placeholder_of_dict(ion_dict)
+    # thermos_place, thermo_place_copy = thermostat.get_placeholders(thermostats)
     # print("tf_dict (s)", time.time() - a)
-    thermostats_g, ion_dict_g, ke_g, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density_g, neg_bin_density_g = build_graph(
-        simul_box, thermos_place, tf_ion_place, mdremote.timestep, mdremote, bins, charge_meshpoint)
-    sess.run(tf.compat.v1.global_variables_initializer())
-    loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermostats_g, ion_dict_g, ion_dict,
-         ion_place_copy, thermostats, thermo_place_copy, sess, mdremote, ke_g, expfac_real_g, initial_ke, bins,
-         pos_bin_density_g, neg_bin_density_g)
+    # thermostats_g, ion_dict_g, ke_g, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density_g, neg_bin_density_g = build_graph(
+    #     simul_box, thermos_place, tf_ion_place, mdremote.timestep, mdremote, bins, charge_meshpoint)
+    # sess.run(tf.compat.v1.global_variables_initializer())
+    # loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermostats_g, ion_dict_g, ion_dict,
+    #      ion_place_copy, thermostats, thermo_place_copy, sess, mdremote, ke_g, expfac_real_g, initial_ke, bins,
+    #      pos_bin_density_g, neg_bin_density_g)
+    loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, sess, thermostats, ion_dict)
+
+
+    # def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, bins, pos_bin_density_g, neg_bin_density_g):
 
 
 def clean():
@@ -55,26 +59,26 @@ def save(i, ion_dict, therms_dict, kinetic_energy, expfac_real, mydir):
         f.write(str(i) + "\t" + str(expfac_real) + "\n")
 
 
-def build_graph(simul_box, thermostats, ion_dict, dt:float, mdremote, bins, charge_meshpoint):
-    # with tf.name_scope("velocity_verlet"):
-    # TODO: get working with tf.function => faster graph execution with or without?
-    ke_g = ke_placeholder
-    for i in range(0, mdremote.freq):
-        # print("inside for loop of build graph")
-        thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_g)
-        thermostats = thermostat.update_eta(thermostats, dt)
-        expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
-        ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-        ion_dict = particle.update_position(simul_box, ion_dict, dt)
-        ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
-        ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
-        ke_g = energies.kinetic_energy(ion_dict)
-        thermostats = thermostat.update_eta(thermostats, dt)
-        thermostats = thermostat.forward_update_xi(thermostats, dt, ke_g)
-    (pos_bin_density, neg_bin_density) = bin.tf_get_ion_bin_density(simul_box, ion_dict, bins)
-    pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
-    bath_ke_g = energies.bath_kinetic_energy(thermostats)
-    bath_pe_g = energies.bath_potential_energy(thermostats)
+def build_graph(simul_box, thermostats, ion_dict, mdremote, bins, charge_meshpoint):
+    with tf.name_scope("velocity_verlet"):
+        dt = mdremote.timestep
+        ke_g = ke_placeholder
+        for i in range(0, mdremote.freq):
+            # print("inside for loop of build graph")
+            thermostats = thermostat.reverse_update_xi(thermostats, dt, ke_g)
+            thermostats = thermostat.update_eta(thermostats, dt)
+            expfac_real_g = thermostat.calc_exp_factor(thermostats, dt)
+            ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
+            ion_dict = particle.update_position(simul_box, ion_dict, dt)
+            ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
+            ion_dict = velocities.update_velocity(ion_dict, dt, expfac_real_g)
+            ke_g = energies.kinetic_energy(ion_dict)
+            thermostats = thermostat.update_eta(thermostats, dt)
+            thermostats = thermostat.forward_update_xi(thermostats, dt, ke_g)
+        (pos_bin_density, neg_bin_density) = bin.bin_ions(simul_box, ion_dict, bins)
+        pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
+        bath_ke_g = energies.bath_kinetic_energy(thermostats)
+        bath_pe_g = energies.bath_potential_energy(thermostats)
     return thermostats, ion_dict, ke_g, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density, neg_bin_density
 
 def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_pe, path):
@@ -91,7 +95,16 @@ def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_p
     # TODO : eval() takes more time than np.savetxt(). find a better way to print tensors
     f_energy_file.close()
 
-def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, bins, pos_bin_density_g, neg_bin_density_g):
+# def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, bins, pos_bin_density_g, neg_bin_density_g):
+def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, thermostats, ion_dict):
+    tf_ion_place, ion_place_copy = common.make_tf_placeholder_of_dict(ion_dict)
+    thermos_place, thermo_place_copy = thermostat.get_placeholders(thermostats)
+    t1 = time.time()
+    thermo_g, ion_g, ke_g, expfac_real_g, pe_g, bath_ke_g, bath_pe_g, pos_bin_density_g, neg_bin_density_g = build_graph(
+        simul_box, thermos_place, tf_ion_place, mdremote, bins, charge_meshpoint)
+    session.run(tf.compat.v1.global_variables_initializer())
+    t2 = time.time()
+    print("initial build_graph time:", t2-t1)
     mean_pos_density = [0]*bins["number_of_bins"]
     mean_sq_pos_density = [0]*bins["number_of_bins"]
     mean_neg_density = [0]*bins["number_of_bins"]
@@ -99,15 +112,16 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
     no_density_profile_samples = 0
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
-    ion_feed = common.create_feed_dict((ion_dict, tf_ion_place))
-    ft = thermostat.therms_to_feed_dict(thermostats, thermos_place)
+    ion_feed = common.create_feed_dict((ion_dict, ion_place_copy))
+    ft = thermostat.therms_to_feed_dict(thermostats, thermo_place_copy)
     print("\n Running MD Simulation for ",mdremote.steps," steps")
+
     for i in tqdm(range(1, (mdremote.steps//mdremote.freq + 1))):
         feed = {**planes, **ion_feed, **ft, ke_placeholder:ke_v}
         s = time.time()
         therms_out, ion_dict_out, ke_v, pe_v, bath_ke_v, bath_pe_v, expfac_real_v, pos_bin_density_v, neg_bin_density_v = session.run([thermo_g, ion_g, ke_g, pe_g, bath_ke_g, bath_pe_g, expfac_real_g, pos_bin_density_g, neg_bin_density_g], feed_dict=feed)
-        ion_feed = common.create_feed_dict((ion_dict_out, tf_ion_place))
-        ft = thermostat.therms_to_feed_dict(therms_out, thermos_place)
+        ion_feed = common.create_feed_dict((ion_dict_out, ion_place_copy))
+        ft = thermostat.therms_to_feed_dict(therms_out, thermo_place_copy)
         if mdremote.validate:
             print("\n Entered Validation:::")
             common.throw_if_bad_boundaries(ion_dict_out[interface.ion_pos_str], simul_box)
@@ -127,7 +141,7 @@ def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_io
         # Write density profile
         if (i*mdremote.freq)%mdremote.writedensity==0:
             no_density_profile_samples += 1
-            mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density = bin.record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins, mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density)
+            mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density = bin.record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins, mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density, simul_box, ion_dict)
         # TODO : average_errorbars_density()
 
 def make_movie(num, ion, box):

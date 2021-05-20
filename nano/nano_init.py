@@ -91,10 +91,13 @@ def start_sim(tf_sess_config, args):
                                              counterion_diameter_in=counterion_diameter_in,
                                              bigger_ion_diameter=bigger_ion_diameter, crystal_pack=args.random_pos_init)
 
-    simul_box.discretize(smaller_ion_diameter / utility.unitlength, args.fraction_diameter, charge_meshpoint)
+
     bins = bin.make_bins(simul_box, args.bin_width)
+    (pos_bin_density, neg_bin_density) = bin.bin_ions(simul_box, ion_dict, bins)
+    simul_box.discretize(smaller_ion_diameter / utility.unitlength, args.fraction_diameter, charge_meshpoint)
 
     # TODO: write initial densities
+
     thermos = thermostat.make_thermostats(args.chain_length_real, ions_count=len(ion_dict[interface.ion_pos_str]),
                                           Q=args.therm_mass)
 
