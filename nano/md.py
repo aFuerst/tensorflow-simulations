@@ -75,7 +75,7 @@ def build_graph(simul_box, thermostats, ion_dict, mdremote, bins, charge_meshpoi
             ke_g = energies.kinetic_energy(ion_dict)
             thermostats = thermostat.update_eta(thermostats, dt)
             thermostats = thermostat.forward_update_xi(thermostats, dt, ke_g)
-        (pos_bin_density, neg_bin_density) = bin.bin_ions(simul_box, ion_dict, bins)
+        (pos_bin_density, neg_bin_density) = bin.Bin().bin_ions(simul_box, ion_dict, bins)
         pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
         bath_ke_g = energies.bath_kinetic_energy(thermostats)
         bath_pe_g = energies.bath_potential_energy(thermostats)
@@ -92,7 +92,6 @@ def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_p
             real_bath_ke) + "\t" + str(
             real_bath_pe) + "\n")
     # f_energy_file.write(str(i)+"\t"+str(ext_energy.eval(session=tf.compat.v1.Session()))+"\t"+str(particle_ke)+"\t"+str(potential_energy.eval(session=tf.compat.v1.Session()))+"\t"+str(real_bath_ke.eval(session=tf.compat.v1.Session()))+"\t"+str(real_bath_pe.eval(session=tf.compat.v1.Session()))+"\n")
-    # TODO : eval() takes more time than np.savetxt(). find a better way to print tensors
     f_energy_file.close()
 
 # def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, bins, pos_bin_density_g, neg_bin_density_g):
@@ -105,10 +104,10 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
     session.run(tf.compat.v1.global_variables_initializer())
     t2 = time.time()
     print("initial build_graph time:", t2-t1)
-    mean_pos_density = [0]*bins["number_of_bins"]
-    mean_sq_pos_density = [0]*bins["number_of_bins"]
-    mean_neg_density = [0]*bins["number_of_bins"]
-    mean_sq_neg_density = [0]*bins["number_of_bins"]
+    mean_pos_density = [0]*len(bins)
+    mean_sq_pos_density = [0]*len(bins)
+    mean_neg_density = [0]*len(bins)
+    mean_sq_neg_density = [0]*len(bins)
     no_density_profile_samples = 0
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
@@ -131,7 +130,8 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
         # compute_n_write_useful_data
         if (i*mdremote.freq)==1 or (i*mdremote.freq)%mdremote.extra_compute == 0:
             save_useful_data(i*mdremote.freq, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
-        #print("iteration {} done".format(i))
+            save(i*mdremote.freq,ion_dict_out,therms_out,ke_v,expfac_real_v,utility.root_path)
+        # print("iteration {} done".format(i))
 
         # generate movie file
         # moviestart = 1
@@ -141,7 +141,7 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
         # Write density profile
         if (i*mdremote.freq)%mdremote.writedensity==0:
             no_density_profile_samples += 1
-            mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density = bin.record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins, mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density, simul_box, ion_dict)
+            mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density = bin.Bin().record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins, mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density, simul_box, ion_dict)
         # TODO : average_errorbars_density()
 
 def make_movie(num, ion, box):
