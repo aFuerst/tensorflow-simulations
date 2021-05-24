@@ -92,8 +92,10 @@ def start_sim(tf_sess_config, args):
                                              bigger_ion_diameter=bigger_ion_diameter, crystal_pack=args.random_pos_init)
 
 
-    bins = bin.make_bins(simul_box, args.bin_width)
-    (pos_bin_density, neg_bin_density) = bin.bin_ions(simul_box, ion_dict, bins)
+    bins = bin.Bin().make_bins(simul_box, args.bin_width, ion_dict[interface.ion_diameters_str][0])
+
+    (pos_bin_density, neg_bin_density) = bin.Bin().bin_ions(simul_box, ion_dict, bins)
+    pos_bin_density+neg_bin_density
     simul_box.discretize(smaller_ion_diameter / utility.unitlength, args.fraction_diameter, charge_meshpoint)
 
     # TODO: write initial densities
@@ -105,7 +107,16 @@ def start_sim(tf_sess_config, args):
     ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
 
     md.run_md_sim(tf_sess_config, simul_box, thermos, ion_dict, charge_meshpoint, valency_counterion, mdremote, bins)
-
+    # Starting screen factor processing
+    # if charge_density != 0:
+    #     screen = True
+    #     print("Screen Factor Processing Started.")
+    #     number_of_bins = simul_box.lz//bins[0].width
+    #     bin_width = simul_box/number_of_bins
+    #     bin_width = bin_width * 0.01
+    #     cnt_filename = 0
+    #     samples = 0
+    #     screen_bins = bin.Bin().make_bins(simul_box, bin_width,ion_dict[interface.ion_diameters_str][0])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

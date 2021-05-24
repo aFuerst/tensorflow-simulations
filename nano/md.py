@@ -128,9 +128,9 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
                 raise Exception("Temperature too high! was '{}'".format(2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)))
 
         # compute_n_write_useful_data
-        if (i*mdremote.freq)==1 or (i*mdremote.freq)%mdremote.extra_compute == 0:
-            save_useful_data(i*mdremote.freq, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
-            save(i*mdremote.freq,ion_dict_out,therms_out,ke_v,expfac_real_v,utility.root_path)
+        # if (i*mdremote.freq)==1 or (i*mdremote.freq)%mdremote.extra_compute == 0:
+        #     save_useful_data(i*mdremote.freq, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
+        #     save(i*mdremote.freq,ion_dict_out,therms_out,ke_v,expfac_real_v,utility.root_path)
         # print("iteration {} done".format(i))
 
         # generate movie file
