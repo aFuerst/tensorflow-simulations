@@ -14,10 +14,6 @@ class Bin:
         self.mean_neg_density = 0.0
         self.mean_sq_pos_density = 0.0
         self.mean_sq_neg_density = 0.0
-        # number_of_bins = None
-
-        # pos_bin_density_records = []
-        # neg_bin_density_records = []
 
     def make_bins(self, box, set_bin_width, ion_diam):
         bins = []
@@ -61,7 +57,7 @@ class Bin:
             contact_filter_1 = tf.math.logical_and(tf.math.greater_equal(z_pos, bins[len(bins)-1].lower), tf.math.less(z_pos, bins[len(bins)-1].higher))
             contact_filter_2 = tf.math.logical_and(tf.math.greater_equal(z_pos, bins[len(bins) - 2].lower),
                                                    tf.math.less(z_pos, bins[len(bins) - 2].higher))
-            # bin_nums = tf.compat.v1.where_v2(contact_filter_1, len(bins) - 1, bin_nums)
+            bin_nums = tf.compat.v1.where_v2(contact_filter_1, len(bins) - 1, bin_nums)
             bin_nums = tf.compat.v1.where_v2(contact_filter_2, len(bins) - 2, bin_nums)
             out_bin_nums = tf.Print(bin_nums, [bin_nums[0], bins[len(bins)-1].lower, bins[len(bins)-1].higher, box.lz, bins[0].width, z_pos[0], tf.dtypes.cast((z_pos[0] + 0.5*box.lz) / bins[0].width, tf.int32)], " bin_nums")
             pos_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(out_bin_nums, charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) / bins[0].volume
@@ -72,19 +68,13 @@ class Bin:
     def record_densities(self, iter, pos_bin_density, neg_bin_density, no_samples, bins):
         for i in range(0, len(bins)):
             bins[i].mean_pos_density += pos_bin_density[i]
-        # for i in range(0, len(bins)):
             bins[i].mean_neg_density += neg_bin_density[i]
-        # for i in range(0, len(bins)):
             bins[i].mean_sq_pos_density += pos_bin_density[i]*pos_bin_density[i]
-        # for i in range(0, len(bins)):
             bins[i].mean_sq_neg_density += neg_bin_density[i]*neg_bin_density[i]
-        path = utility.root_path
         outdenp = open(os.path.join(utility.root_path,"_z+_den-{}.dat".format(iter)), 'w')
         outdenn = open(os.path.join(utility.root_path,"_z-_den-{}.dat".format(iter)), 'w')
         bins_sorted = sorted(bins, key=lambda x: x.midpoint, reverse=False)
-        # print(bins_sorted[11].midpoint, bins_sorted[84].midpoint, bins[11].midpoint)
         for b in range(0, len(bins)):
-            # print("midpoint of bin:", b,"is:",bins_sorted[b].midpoint)
             outdenp.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_pos_density/no_samples)+"\n")
             outdenn.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_neg_density/no_samples)+"\n")
         return bins
