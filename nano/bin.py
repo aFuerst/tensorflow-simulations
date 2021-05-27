@@ -5,11 +5,15 @@ import os
 
 class Bin:
     def __init__(self):
-        volume = None
-        width = None
-        lower = 0.0
-        upper = 0.0
-        midpoint = 0.0
+        self.volume = None
+        self.width = None
+        self.lower = 0.0
+        self.upper = 0.0
+        self.midpoint = 0.0
+        self.mean_pos_density = 0.0
+        self.mean_neg_density = 0.0
+        self.mean_sq_pos_density = 0.0
+        self.mean_sq_neg_density = 0.0
         # number_of_bins = None
 
         # pos_bin_density_records = []
@@ -31,12 +35,10 @@ class Bin:
             bin.lower = 0.5 * (-box.lz) + bin_num * bin.width
             bin.higher = 0.5 * (-box.lz) + (bin_num + 1) * bin.width
             bin.midpoint = 0.5*(bin.lower + bin.higher)
-            # f_listbin.write(str(bin.width) + "\t" + str(bin.volume) + "\t" + str(bin.lower) + "\t" + str(bin.higher) + "\t" + str(bin.midpoint)+"\n")
             bins.append(bin)
         # This is to get contact point densities
         leftContact = -0.5 * box.lz + 0.5 * ion_diam - 0.5 * bins[0].width
         rightContact = 0.5 * box.lz - 0.5 * ion_diam - 0.5 * bins[0].width
-        # print("leftcontact:", leftContact," rightcontact:", rightContact)
         bins[len(bins) - 1].lower = leftContact
         bins[len(bins) - 2].lower = rightContact
         bins[len(bins) - 1].higher = leftContact + bin_width
@@ -59,39 +61,30 @@ class Bin:
             contact_filter_1 = tf.math.logical_and(tf.math.greater_equal(z_pos, bins[len(bins)-1].lower), tf.math.less(z_pos, bins[len(bins)-1].higher))
             contact_filter_2 = tf.math.logical_and(tf.math.greater_equal(z_pos, bins[len(bins) - 2].lower),
                                                    tf.math.less(z_pos, bins[len(bins) - 2].higher))
-            bin_nums = tf.compat.v1.where_v2(contact_filter_1, len(bins) - 1, bin_nums)
+            # bin_nums = tf.compat.v1.where_v2(contact_filter_1, len(bins) - 1, bin_nums)
             bin_nums = tf.compat.v1.where_v2(contact_filter_2, len(bins) - 2, bin_nums)
-            out_bin_nums = tf.Print(bin_nums, [bins[0].volume, box.lz, bins[0].width, z_pos[0], tf.dtypes.cast((z_pos[0] + 0.5*box.lz) / bins[0].width, tf.int32)], " bin_nums")
+            out_bin_nums = tf.Print(bin_nums, [bin_nums[0], bins[len(bins)-1].lower, bins[len(bins)-1].higher, box.lz, bins[0].width, z_pos[0], tf.dtypes.cast((z_pos[0] + 0.5*box.lz) / bins[0].width, tf.int32)], " bin_nums")
             pos_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(out_bin_nums, charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) / bins[0].volume
             neg_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, neg_charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) / bins[0].volume
-            # out_pos_bin_density = tf.Print(pos_bin_density, [pos_bin_density[9], neg_bin_density[9]], "out_pos_bin_density")
-            # for ele in ion_dict[interface.ion_pos_str][:, -1]:
-            #     if ele < bins[len(bins)-1].higher and ele >= bins[len(bins)-1].lower:
-            #         tf.reduce_sum(pos_bin_density[len(bins)-1], 1)
-            #     elif ele < bins[len(bins)-2].higher and ele >= bins[len(bins)-2].lower:
-            #         tf.reduce_sum(pos_bin_density[len(bins)-2], 1)
-            return pos_bin_density, neg_bin_density
+            out_pos_bin_density = tf.Print(pos_bin_density,[pos_bin_density[9]],"pos_bin_density")
+            return out_pos_bin_density, neg_bin_density
 
-    def record_densities(self, iter, pos_bin_density, neg_bin_density, no_samples, bins, mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density, simul_box, ion_dict):
-        # pos_bin_density_records.append(pos_bin_density)
-        # neg_bin_density_records.append(neg_bin_density)
-        # print("pos_bin_density:", pos_bin_density)
-        # (pos_bin_density, neg_bin_density) = bin_ions(simul_box, ion_dict, bins)
-        for i in range(0, len(mean_pos_density)):
-            mean_pos_density[i] += pos_bin_density[i]
-        # out_mean_pos_density = tf.Print(mean_pos_density, [pos_bin_density[9], pos_bin_density[10]], "mean_pos_density")
-        for i in range(0, len(mean_neg_density)):
-            mean_neg_density[i] += neg_bin_density[i]
-        for i in range(0, len(mean_sq_pos_density)):
-            mean_sq_pos_density[i] += pos_bin_density[i]*pos_bin_density[i]
-        for i in range(0, len(mean_sq_neg_density)):
-            mean_sq_neg_density[i] += neg_bin_density[i]*neg_bin_density[i]
+    def record_densities(self, iter, pos_bin_density, neg_bin_density, no_samples, bins):
+        for i in range(0, len(bins)):
+            bins[i].mean_pos_density += pos_bin_density[i]
+        # for i in range(0, len(bins)):
+            bins[i].mean_neg_density += neg_bin_density[i]
+        # for i in range(0, len(bins)):
+            bins[i].mean_sq_pos_density += pos_bin_density[i]*pos_bin_density[i]
+        # for i in range(0, len(bins)):
+            bins[i].mean_sq_neg_density += neg_bin_density[i]*neg_bin_density[i]
         path = utility.root_path
-        outdenp = open(os.path.join(path,"_z+_den-{}.dat".format(iter)), 'w')
-        outdenn = open(os.path.join(path,"_z-_den-{}.dat".format(iter)), 'w')
-        # print("no sample:", no_samples)
+        outdenp = open(os.path.join(utility.root_path,"_z+_den-{}.dat".format(iter)), 'w')
+        outdenn = open(os.path.join(utility.root_path,"_z-_den-{}.dat".format(iter)), 'w')
+        bins_sorted = sorted(bins, key=lambda x: x.midpoint, reverse=False)
+        # print(bins_sorted[11].midpoint, bins_sorted[84].midpoint, bins[11].midpoint)
         for b in range(0, len(bins)):
-            print("midpoint of bin:", b,"is:",bins[b].midpoint)
-            outdenp.write(str(bins[b].midpoint*utility.unitlength)+"\t"+str(mean_pos_density[b]/no_samples)+"\n")
-            outdenn.write(str(bins[b].midpoint*utility.unitlength)+"\t"+str(mean_neg_density[b]/no_samples)+"\n")
-        return mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density
+            # print("midpoint of bin:", b,"is:",bins_sorted[b].midpoint)
+            outdenp.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_pos_density/no_samples)+"\n")
+            outdenn.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_neg_density/no_samples)+"\n")
+        return bins

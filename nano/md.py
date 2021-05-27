@@ -141,7 +141,7 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
         # Write density profile
         if (i*mdremote.freq)%mdremote.writedensity==0:
             no_density_profile_samples += 1
-            mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density = bin.Bin().record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins, mean_pos_density, mean_sq_pos_density, mean_neg_density, mean_sq_neg_density, simul_box, ion_dict)
+            bins = bin.Bin().record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins)
         # TODO : average_errorbars_density()
 
 def make_movie(num, ion, box):
