@@ -104,10 +104,6 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
     session.run(tf.compat.v1.global_variables_initializer())
     t2 = time.time()
     print("initial build_graph time:", t2-t1)
-    mean_pos_density = [0]*len(bins)
-    mean_sq_pos_density = [0]*len(bins)
-    mean_neg_density = [0]*len(bins)
-    mean_sq_neg_density = [0]*len(bins)
     no_density_profile_samples = 0
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
@@ -142,7 +138,11 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
         if (i*mdremote.freq)%mdremote.writedensity==0:
             no_density_profile_samples += 1
             bins = bin.Bin().record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins)
-        # TODO : average_errorbars_density()
+
+    # Average_errorbars_density()
+    bin.Bin().average_errorbars_density(no_density_profile_samples, ion_dict_out, simul_box, bins, utility.simul_params)
+
+
 
 def make_movie(num, ion, box):
     path = utility.root_path

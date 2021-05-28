@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import utility, interface, common
 import os
+import math
 
 class Bin:
     def __init__(self):
@@ -78,3 +79,40 @@ class Bin:
             outdenp.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_pos_density/no_samples)+"\n")
             outdenn.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_neg_density/no_samples)+"\n")
         return bins
+
+    def average_errorbars_density(self, density_profile_samples, ion_dict_out, simul_box, bins, simul_params):
+        # 1. density profile
+        positiveion_density_profile = []
+        negativeion_density_profile = []
+        for b in range (0, len(bins)):
+            positiveion_density_profile.append(bins[b].mean_pos_density / density_profile_samples)
+            negativeion_density_profile.append(bins[b].mean_neg_density / density_profile_samples)
+
+        # 2. error bars: Standard error is used not std
+        p_error_bar = []
+        n_error_bar = []
+        for b in range(0, len(bins)):
+            print(b,"*******", density_profile_samples, bins[b].mean_sq_pos_density/density_profile_samples,positiveion_density_profile[b] * positiveion_density_profile[b])
+            p_error_bar.append(np.sqrt(1/density_profile_samples) * np.sqrt(bins[b].mean_sq_pos_density/density_profile_samples - positiveion_density_profile[b] * positiveion_density_profile[b]))
+            n_error_bar.append(np.sqrt(1/density_profile_samples) * np.sqrt(bins[b].mean_sq_neg_density/density_profile_samples - negativeion_density_profile[b] * negativeion_density_profile[b]))
+
+        # 3. write results
+        p_density_profile = "p_density_profile" + simul_params + ".dat"
+        n_density_profile = "n_density_profile" + simul_params + ".dat"
+        positiveDenistyMap = {}
+        negativeDensityMap = {}
+        f_pos = open(os.path.join(utility.root_path, p_density_profile), 'a')
+        f_neg = open(os.path.join(utility.root_path, n_density_profile), 'a')
+        for b in range(0, len(bins)):
+            stringRow_p = str(bins[b].midpoint * utility.unitlength)+"\t"+str(positiveion_density_profile[b])+"\t"+str(p_error_bar[b])+"\n"
+            positiveDenistyMap[bins[b].midpoint * utility.unitlength] = stringRow_p
+            stringRow_n = str(bins[b].midpoint * utility.unitlength)+"\t"+str(negativeion_density_profile[b])+"\t"+str(n_error_bar[b])+"\n"
+            negativeDensityMap[bins[b].midpoint * utility.unitlength] = stringRow_n
+
+        for key in positiveDenistyMap.keys():
+            f_pos.write(positiveDenistyMap[key])
+        for key in negativeDensityMap.keys():
+            f_pos.write(negativeDensityMap[key])
+
+        f_pos.close()
+        f_neg.close()

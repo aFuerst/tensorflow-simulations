@@ -13,3 +13,4 @@ T = 1.0 # temperature in reduced units
 elj = 1.0
 pi = 3.141593
 root_path=''
+simul_params = ""
