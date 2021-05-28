@@ -56,7 +56,7 @@ def start_sim(tf_sess_config, args):
     print("DEBUG:: total_surface_charge:", total_surface_charge, " charge_meshpoint:",charge_meshpoint," number of meshpoints:",number_meshpoints)
     counterions = 2.0 * (int(abs(
         total_surface_charge) / valency_counterion))  # there are two charged surfaces, we multiply the counter ions by two
-    counterions = 0
+    # counterions = 0
     print("Counterions:", counterions)
     nz_in = args.neg_valency
 

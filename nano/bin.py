@@ -92,7 +92,7 @@ class Bin:
         p_error_bar = []
         n_error_bar = []
         for b in range(0, len(bins)):
-            print(b,"*******", density_profile_samples, bins[b].mean_sq_pos_density/density_profile_samples,positiveion_density_profile[b] * positiveion_density_profile[b])
+            # print(b,"*******", density_profile_samples, bins[b].mean_sq_pos_density/density_profile_samples,positiveion_density_profile[b] * positiveion_density_profile[b])
             p_error_bar.append(np.sqrt(1/density_profile_samples) * np.sqrt(bins[b].mean_sq_pos_density/density_profile_samples - positiveion_density_profile[b] * positiveion_density_profile[b]))
             n_error_bar.append(np.sqrt(1/density_profile_samples) * np.sqrt(bins[b].mean_sq_neg_density/density_profile_samples - negativeion_density_profile[b] * negativeion_density_profile[b]))
 
@@ -112,7 +112,7 @@ class Bin:
         for key in positiveDenistyMap.keys():
             f_pos.write(positiveDenistyMap[key])
         for key in negativeDensityMap.keys():
-            f_pos.write(negativeDensityMap[key])
+            f_neg.write(negativeDensityMap[key])
 
         f_pos.close()
         f_neg.close()
