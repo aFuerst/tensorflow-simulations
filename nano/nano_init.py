@@ -70,16 +70,16 @@ def start_sim(tf_sess_config, args):
 
     if (mdremote.steps < 100000):  # minimum mdremote.steps is 20000
         mdremote.hiteqm = int(mdremote.steps * 0.1)
-        #mdremote.writedensity = int(mdremote.steps * 0.1)
-        #mdremote.extra_compute = int(mdremote.steps * 0.01)
-        #mdremote.moviefreq = int(mdremote.steps * 0.001)
+        mdremote.writedensity = int(mdremote.steps * 0.1)
+        mdremote.extra_compute = int(mdremote.steps * 0.01)
+        mdremote.moviefreq = int(mdremote.steps * 0.001)
     else:
         mdremote.hiteqm = int(mdremote.steps * 0.2)
-        #mdremote.writedensity = int(mdremote.steps * 0.1)
-        #mdremote.extra_compute = int(mdremote.steps * 0.01)
-        #mdremote.moviefreq = int(mdremote.steps * 0.001)
+        mdremote.writedensity = int(mdremote.steps * 0.1)
+        mdremote.extra_compute = int(mdremote.steps * 0.01)
+        mdremote.moviefreq = int(mdremote.steps * 0.001)
 
-    T = 1
+    # T = 1
     simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in,
                                     salt_valency_out=0, bx=bx / utility.unitlength, by=by / utility.unitlength,
                                     bz=bz / utility.unitlength, \
@@ -90,16 +90,23 @@ def start_sim(tf_sess_config, args):
                                              valency_counterion=valency_counterion, \
                                              counterion_diameter_in=counterion_diameter_in,
                                              bigger_ion_diameter=bigger_ion_diameter, crystal_pack=args.random_pos_init)
-
-
     bins = bin.Bin().make_bins(simul_box, args.bin_width, ion_dict[interface.ion_diameters_str][0])
-
     (pos_bin_density, neg_bin_density) = bin.Bin().bin_ions(simul_box, ion_dict, bins)
     pos_bin_density+neg_bin_density
     simul_box.discretize(smaller_ion_diameter / utility.unitlength, args.fraction_diameter, charge_meshpoint)
 
-    # TODO: write initial densities
+    # write initial densities
+    density_pos = "initial_density_pos.dat"
+    density_neg = "initial_density_neg.dat"
+    f_den_pos = open(os.path.join(utility.root_path, density_pos), 'a')
+    f_den_neg = open(os.path.join(utility.root_path, density_neg), 'a')
+    # for b in range(0, len(pos_bin_density)):
+    #     f_den_pos.write(bins[b].midpoint+"\t"+pos_bin_density[b]+"\n")
+    #     f_den_neg.write(bins[b].midpoint+"\t"+neg_bin_density[b]+"\n")
+    f_den_neg.close()
+    f_den_pos.close()
 
+    #setup thermostats
     thermos = thermostat.make_thermostats(args.chain_length_real, ions_count=len(ion_dict[interface.ion_pos_str]),
                                           Q=args.therm_mass)
 
