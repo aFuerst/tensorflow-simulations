@@ -1,10 +1,8 @@
-import tensorflow as tf
 import numpy as np
 import argparse, math, os, datetime
-
-import utility, control, interface, bin, thermostat, md, velocities, forces, common
-import tensorflow_manip as tfmanip
-
+from api.util import tensorflow_manip as tfmanip
+from api.util import utility, control
+from api.simulation import interface, thermostat, velocities, forces, bin, md
 np.random.seed(0)  # be consistent
 
 
@@ -12,7 +10,7 @@ np.random.seed(0)  # be consistent
 # np.set_printoptions(threshold=sys.maxsize)
 
 def start_sim(tf_sess_config, args):
-    utility.root_path = os.path.join("output/", datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    utility.root_path = os.path.join("../output/", datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     os.makedirs(utility.root_path)
     negative_diameter_in = args.neg_diameter
     positive_diameter_in = args.pos_diameter
