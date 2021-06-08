@@ -54,12 +54,13 @@ class Interface:
         volume_box = self.lx*self.ly*self.lz
 
         total_nions_inside = int((concentration * 0.6022) * (volume_box * utility.unitlength * utility.unitlength * utility.unitlength))
-        # total_nions_inside = 1
+
         if (total_nions_inside % pz !=0):
             total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
 
         total_pions_inside = abs(nz) * total_nions_inside / pz
-        # total_pions_inside = 1
+        total_nions_inside = 206
+        total_pions_inside = 206
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
         print("total_saltions_inside", total_saltions_inside)
 
