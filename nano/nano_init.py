@@ -92,7 +92,7 @@ def start_sim(tf_sess_config, args):
                                              bigger_ion_diameter=bigger_ion_diameter, crystal_pack=args.random_pos_init)
     bins = bin.Bin().make_bins(simul_box, args.bin_width, ion_dict[interface.ion_diameters_str][0])
     (pos_bin_density, neg_bin_density) = bin.Bin().bin_ions(simul_box, ion_dict, bins)
-    # pos_bin_density+neg_bin_density
+    pos_bin_density+neg_bin_density
     simul_box.discretize(smaller_ion_diameter / utility.unitlength, args.fraction_diameter, charge_meshpoint)
 
     # write initial densities
@@ -100,9 +100,9 @@ def start_sim(tf_sess_config, args):
     density_neg = "initial_density_neg.dat"
     f_den_pos = open(os.path.join(utility.root_path, density_pos), 'a')
     f_den_neg = open(os.path.join(utility.root_path, density_neg), 'a')
-    for b in range(0, len(pos_bin_density)):
-        f_den_pos.write(bins[b].midpoint+"\t"+pos_bin_density[b]+"\n")
-        f_den_neg.write(bins[b].midpoint+"\t"+neg_bin_density[b]+"\n")
+    # for b in range(0, len(pos_bin_density)):
+    #     f_den_pos.write(bins[b].midpoint+"\t"+pos_bin_density[b]+"\n")
+    #     f_den_neg.write(bins[b].midpoint+"\t"+neg_bin_density[b]+"\n")
     f_den_neg.close()
     f_den_pos.close()
 
