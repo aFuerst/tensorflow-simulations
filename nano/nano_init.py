@@ -65,14 +65,14 @@ def start_sim(tf_sess_config, args):
 
     if (mdremote.steps < 100000):  # minimum mdremote.steps is 20000
         mdremote.hiteqm = int(mdremote.steps * 0.1)
-        # mdremote.writedensity = int(mdremote.steps * 0.1)
-        # mdremote.extra_compute = int(mdremote.steps * 0.01)
-        # mdremote.moviefreq = int(mdremote.steps * 0.001)
+        mdremote.writedensity = int(mdremote.steps * 0.1)
+        mdremote.extra_compute = int(mdremote.steps * 0.01)
+        mdremote.moviefreq = int(mdremote.steps * 0.001)
     else:
         mdremote.hiteqm = int(mdremote.steps * 0.2)
-        # mdremote.writedensity = int(mdremote.steps * 0.1)
-        # mdremote.extra_compute = int(mdremote.steps * 0.01)
-        # mdremote.moviefreq = int(mdremote.steps * 0.001)
+        mdremote.writedensity = int(mdremote.steps * 0.1)
+        mdremote.extra_compute = int(mdremote.steps * 0.01)
+        mdremote.moviefreq = int(mdremote.steps * 0.001)
 
 
 
