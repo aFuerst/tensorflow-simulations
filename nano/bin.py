@@ -61,8 +61,8 @@ class Bin:
             bin_nums = tf.compat.v1.where_v2(contact_filter_1, len(bins) - 1, bin_nums)
             bin_nums = tf.compat.v1.where_v2(contact_filter_2, len(bins) - 2, bin_nums)
             # out_bin_nums = tf.Print(bin_nums, [bin_nums[0], bins[len(bins)-1].lower, bins[len(bins)-1].higher, box.lz, bins[0].width, z_pos[0], tf.dtypes.cast((z_pos[0] + 0.5*box.lz) / bins[0].width, tf.int32)], " bin_nums")
-            pos_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) #/ bins[0].volume
-            neg_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, neg_charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) #/ bins[0].volume
+            pos_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) / bins[0].volume
+            neg_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, neg_charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) / bins[0].volume
             # out_pos_bin_density = tf.Print(pos_bin_density,[pos_bin_density[9]],"pos_bin_density")
             return pos_bin_density, neg_bin_density
 
