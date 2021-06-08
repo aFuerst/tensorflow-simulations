@@ -23,8 +23,7 @@ class Bin:
 
         bin_width = (box.lz / number_of_bins)  # To make discretization of bins symmetric, we recalculate the bin_width
         number_of_bins += 2
-        print("number of bins:", number_of_bins, "\n box.lz:", box.lz, "\n set_bin_width:", set_bin_width,
-              "\n utility.unitlength:", utility.unitlength)
+        # print("number of bins:", number_of_bins, "\n box.lz:", box.lz, "\n set_bin_width:", set_bin_width,"\n utility.unitlength:", utility.unitlength)
         bin_volume = (bin_width * box.lx * box.ly) * (utility.unitlength * utility.unitlength * utility.unitlength) * 0.6022
         f_listbin = open(os.path.join(utility.root_path, "listbin.dat"), 'a')
         for bin_num in range(0, number_of_bins):

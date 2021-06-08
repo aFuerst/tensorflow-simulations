@@ -26,8 +26,7 @@ def start_sim(tf_sess_config, args):
         smaller_ion_diameter = negative_diameter_in
         bigger_ion_diameter = positive_diameter_in
 
-    utility.unittime = math.sqrt(
-        utility.unitmass * utility.unitlength * pow(10.0, -7) * utility.unitlength / utility.unitenergy)
+    utility.unittime = math.sqrt(utility.unitmass * utility.unitlength * pow(10.0, -7) * utility.unitlength / utility.unitenergy)
     utility.scalefactor = utility.epsilon_water * utility.lB_water / utility.unitlength
     bz = args.confinment_len
     salt_conc_in = args.concentration
@@ -35,12 +34,12 @@ def start_sim(tf_sess_config, args):
     bx = args.bx
     if salt_conc_in > 0.5:
         bx = 10.0
-        args.fraction_diameter = 1 / 28.0;
+        args.fraction_diameter = 1 / 28.0
     else:
         bx = 15.0
-        args.fraction_diameter = 1 / 42.0;
+        args.fraction_diameter = 1 / 42.0
     by = bx
-    print("bx by unitlength",str(bx), " ", str(by)," ",bz," ",utility.unitlength," ",salt_conc_in)
+    # print("In nanometers, bx:",str(bx), " by: ", str(by)," bz:", bz, "\nunit length:", utility.unitlength, "\nsal conc:",salt_conc_in)
     if (charge_density < -0.01 or charge_density > 0.0):  # we can choose charge density on surface between 0.0 (uncharged surfaces)  to -0.01 C/m2.
         print("\ncharge density on the surface must be between zero to -0.01 C/m-2 aborting\n")
         exit(1)
@@ -50,14 +49,9 @@ def start_sim(tf_sess_config, args):
     surface_area = bx * by * pow(10.0, -18)  # in unit of squared meter
     number_meshpoints = pow((1.0 / args.fraction_diameter), 2.0)
     charge_meshpoint = (charge_density * surface_area) / (utility.unitcharge * number_meshpoints)
-    # charge_meshpoint = 0
     # in unit of electron charge
     total_surface_charge = charge_meshpoint * number_meshpoints  # in unit of electron charge
-    print("DEBUG:: total_surface_charge:", total_surface_charge, " charge_meshpoint:",charge_meshpoint," number of meshpoints:",number_meshpoints)
-    counterions = 2.0 * (int(abs(
-        total_surface_charge) / valency_counterion))  # there are two charged surfaces, we multiply the counter ions by two
-    # counterions = 0
-    print("Counterions:", counterions)
+    counterions = 2.0 * (int(abs(total_surface_charge) / valency_counterion))  # there are two charged surfaces, we multiply the counter ions by two
     nz_in = args.neg_valency
 
     # we should make sure the total charge of both surfaces and the counter ions are zero
@@ -66,6 +60,7 @@ def start_sim(tf_sess_config, args):
         charge_meshpoint = -1.0 * (valency_counterion * counterions) / (number_meshpoints * 2.0)
         total_surface_charge = charge_meshpoint * number_meshpoints  # we recalculate the total charge on teh surface
         charge_density = (total_surface_charge * utility.unitcharge) / surface_area  # in unit of Coulomb per squared meter
+
     mdremote = control.Control(args)
 
     if (mdremote.steps < 100000):  # minimum mdremote.steps is 20000
@@ -79,7 +74,9 @@ def start_sim(tf_sess_config, args):
         # mdremote.extra_compute = int(mdremote.steps * 0.01)
         # mdremote.moviefreq = int(mdremote.steps * 0.001)
 
-    # T = 1
+
+
+    T = 1
     simul_box = interface.Interface(salt_conc_in=salt_conc_in, salt_conc_out=0, salt_valency_in=pz_in,
                                     salt_valency_out=0, bx=bx / utility.unitlength, by=by / utility.unitlength,
                                     bz=bz / utility.unitlength, \
@@ -113,6 +110,42 @@ def start_sim(tf_sess_config, args):
     ion_dict = velocities.initialize_particle_velocities(ion_dict, thermos)
     ion_dict = forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint)
 
+    #np.power is just used for conversion
+    # pos_ions = pos_bin_density * np.power(bins[0].volume, 1)
+    # neg_ions = neg_bin_density * np.power(bins[0].volume, 1)
+
+    # printing system information
+    print("Total_surface_charge:", total_surface_charge, "\ncharge_meshpoint:", charge_meshpoint)
+    print("Charge density:", charge_density)
+    print("Dielectric constant of water ", utility.epsilon_water)
+    print("Unit length ", utility.unitlength)
+    print("Unit of mass ", utility.unitmass)
+    print("Unit of energy ", utility.unitenergy)
+    print("Unit time ", utility.unittime)
+    print("Simulation box dimensions (in reduced units) x | y | z ", simul_box.lx, simul_box.ly, simul_box.lz)
+    print("Box dimensions (in nanometers) x | y | z ", bx, by, bz)
+    print("Permittivity inside and outside the confinement (channel) ", mdremote.ein, mdremote.eout)
+    print("Dielectric contrast across interfaces ", 2 * (mdremote.eout - mdremote.ein) / (mdremote.eout + mdremote.ein))
+    print("Positive (+) ion valency ", pz_in)
+    print("Negative (-) ion valency ", nz_in)
+    print("Valency of counter ions is ", valency_counterion)
+    print("positive ion diameter (red. units)", positive_diameter_in/utility.unitlength)
+    print("negative ion diameter (red. units)", negative_diameter_in / utility.unitlength)
+    print("counter ion diameter (red units)", counterion_diameter_in / utility.unitlength)
+    print("In MD, charge density ", charge_density)
+    print("Ion (salt) concentration (c) inside ", salt_conc_in, " M")
+    print("Debye length ", simul_box.inv_kappa_in)
+    print("Mean separation between ions ", simul_box.mean_sep_in)
+    print("Temperature (in Kelvin) ", utility.room_temperature)
+    print("Binning width (uniform) ", bins[0].width)
+    print("Number of bins", len(bins))
+    print("Number of points discretizing the left and right planar walls/interfaces/surfaces ", len(simul_box.left_plane["posvec"])," ", len(simul_box.right_plane["posvec"]))
+    # print("Number of ions ", pos_ions+neg_ions+counterions)
+    # print("Number of positive ions ", pos_ions)
+    # print("Number of negative ions ", neg_ions)
+    print("Number of counter ions ", counterions)
+    print("Time step in the simulation", mdremote.timestep)
+
     md.run_md_sim(tf_sess_config, simul_box, thermos, ion_dict, charge_meshpoint, valency_counterion, mdremote, bins)
     # Starting screen factor processing
     # if charge_density != 0:
@@ -137,8 +170,8 @@ if __name__ == "__main__":
     parser.add_argument('-e', "--pos-valency", action="store", default=1, type=int)  # changed from 1 to 0
     parser.add_argument('-en', "--neg-valency", action="store", default=-1, type=int)  # changed from -1 to 0
     parser.add_argument('-cl', "--confinment-len", action="store", default=3.0, type=float)
-    parser.add_argument('-pd', "--pos-diameter", action="store", default=0.474, type=float)
-    parser.add_argument('-nd', "--neg-diameter", action="store", default=0.627, type=float)
+    parser.add_argument('-pd', "--pos-diameter", action="store", default=0.714, type=float)
+    parser.add_argument('-nd', "--neg-diameter", action="store", default=0.714, type=float)
     parser.add_argument('-d', "--charge-density", action="store", default=-0.0, type=float)
     parser.add_argument("--ein", action="store", default=80, type=float)
     parser.add_argument("--eout", action="store", default=80, type=float)

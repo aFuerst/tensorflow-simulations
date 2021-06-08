@@ -40,12 +40,10 @@ class Interface:
         else:
             self.inv_kappa_out = 0
             self.mean_sep_out = 0
-
-        # simulation box size (in reduced units)
-        print("box_size:", " bx:", bx, " by:", by, " bz:", bz)
         self.lx = bx
         self.ly = by
         self.lz = bz
+        return
 
     def put_saltions_inside(self, pz: int, nz: int, concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter: float, crystal_pack: bool):
         # establish the number of inside salt ions first
@@ -62,7 +60,7 @@ class Interface:
         # total_nions_inside = 203
         # total_pions_inside = 203
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
-        print("total_saltions_inside", total_saltions_inside)
+        # print("total_saltions_inside", total_saltions_inside)
 
         # express diameter in consistent units
         bigger_ion_diameter = bigger_ion_diameter / utility.unitlength # the bigger_ion_diameter can be cation or anion depending on their sizes
@@ -161,14 +159,13 @@ class Interface:
                  ion_masses_str:conv(ion_masses), ion_diameters_str:conv(ion_diameter), ion_epsilon_str:conv(ion_epsilon), ion_valency_str:conv(ion_valency)}  #, ion_valency_str:conv(ion_valency)}
         
     def discretize(self, smaller_ion_diameter: float, f: float, charge_meshpoint: float):
-        print("charge_meshpoint", charge_meshpoint)
+        # print("charge_meshpoint", charge_meshpoint)
         self.width = f * self.lx
         nx = int(self.lx / self.width)
         ny = int(self.ly / self.width)
         left_plane = {"posvec":[], "q":[], "epsilon":[], "a":[], "normalvec":[]}
         right_plane = {"posvec":[], "q":[], "epsilon":[], "a":[], "normalvec":[]}
         area = self.width * self.width
-                
         # creating a discretized hard wall interface at z = - l/2
         for j in range(ny):
             for i in range(nx):
