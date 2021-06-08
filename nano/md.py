@@ -57,7 +57,7 @@ def build_graph(simul_box, thermostats, ion_dict, mdremote, bins, charge_meshpoi
             ke_g = energies.kinetic_energy(ion_dict)
             thermostats = thermostat.update_eta(thermostats, dt)
             thermostats = thermostat.forward_update_xi(thermostats, dt, ke_g)
-            meta_graph_def = tf.compat.v1.train.export_meta_graph(filename=os.path.join("output/logs/", 'tfmd.meta'))
+            # meta_graph_def = tf.compat.v1.train.export_meta_graph(filename=os.path.join("output/logs/", 'tfmd.meta'))
         (pos_bin_density, neg_bin_density) = bin.Bin().bin_ions(simul_box, ion_dict, bins)
         pe_g = energies.energy_functional(simul_box, charge_meshpoint, ion_dict)
         bath_ke_g = energies.bath_kinetic_energy(thermostats)
@@ -95,18 +95,18 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
     ft = thermostat.therms_to_feed_dict(thermostats, thermo_place_copy)
 
     # Writing graph and trace files
-    writer = tf.compat.v1.summary.FileWriter("output/logs/")
-    writer.add_graph(session.graph)
-    if profile:
-        run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
-        run_metadata = tf.compat.v1.RunMetadata()
+    # writer = tf.compat.v1.summary.FileWriter("output/logs/")
+    # writer.add_graph(session.graph)
+    # if profile:
+    #     run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
+    #     run_metadata = tf.compat.v1.RunMetadata()
 
     print("\n Running MD Simulation for ",mdremote.steps," steps")
 
     for i in tqdm(range(1, (mdremote.steps//mdremote.freq + 1))):
         feed = {**planes, **ion_feed, **ft, ke_placeholder:ke_v}
         s = time.time()
-        therms_out, ion_dict_out, ke_v, pe_v, bath_ke_v, bath_pe_v, expfac_real_v, pos_bin_density_v, neg_bin_density_v = session.run([thermo_g, ion_g, ke_g, pe_g, bath_ke_g, bath_pe_g, expfac_real_g, pos_bin_density_g, neg_bin_density_g], feed_dict=feed, options=run_options, run_metadata=run_metadata)
+        therms_out, ion_dict_out, ke_v, pe_v, bath_ke_v, bath_pe_v, expfac_real_v, pos_bin_density_v, neg_bin_density_v = session.run([thermo_g, ion_g, ke_g, pe_g, bath_ke_g, bath_pe_g, expfac_real_g, pos_bin_density_g, neg_bin_density_g], feed_dict=feed) #options=run_options, run_metadata=run_metadata)
         ion_feed = common.create_feed_dict((ion_dict_out, ion_place_copy))
         ft = thermostat.therms_to_feed_dict(therms_out, thermo_place_copy)
         if mdremote.validate:
@@ -114,11 +114,11 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
             common.throw_if_bad_boundaries(ion_dict_out[interface.ion_pos_str], simul_box)
             if (2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)) > 2:
                 raise Exception("Temperature too high! was '{}'".format(2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)))
-        writer.add_graph(session.graph)
-        if profile:
-            from tensorflow.python.client import timeline
-            tl = timeline.Timeline(run_metadata.step_stats)
-            ctf = tl.generate_chrome_trace_format()
+        # writer.add_graph(session.graph)
+        # if profile:
+        #     from tensorflow.python.client import timeline
+        #     tl = timeline.Timeline(run_metadata.step_stats)
+        #     ctf = tl.generate_chrome_trace_format()
             # with open(os.path.join("output/logs/", "{}-profile_timeline.json".format(i)), 'w') as f:
             #     f.write(ctf)
         # meta_graph_def = tf.compat.v1.train.export_meta_graph(filename=os.path.join("output/logs/", 'tfmd.meta'))
