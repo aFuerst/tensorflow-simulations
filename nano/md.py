@@ -138,7 +138,8 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
         if (i*mdremote.freq)%mdremote.writedensity==0:
             no_density_profile_samples += 1
             bins = bin.Bin().record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins)
-    writer.flush()
+    # writer.flush()
+
     # Average_errorbars_density()
     bin.Bin().average_errorbars_density(no_density_profile_samples, ion_dict_out, simul_box, bins, utility.simul_params)
 
