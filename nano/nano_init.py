@@ -137,8 +137,8 @@ if __name__ == "__main__":
     parser.add_argument('-e', "--pos-valency", action="store", default=1, type=int)  # changed from 1 to 0
     parser.add_argument('-en', "--neg-valency", action="store", default=-1, type=int)  # changed from -1 to 0
     parser.add_argument('-cl', "--confinment-len", action="store", default=3.0, type=float)
-    parser.add_argument('-pd', "--pos-diameter", action="store", default=0.714, type=float)
-    parser.add_argument('-nd', "--neg-diameter", action="store", default=0.714, type=float)
+    parser.add_argument('-pd', "--pos-diameter", action="store", default=0.474, type=float)
+    parser.add_argument('-nd', "--neg-diameter", action="store", default=0.627, type=float)
     parser.add_argument('-d', "--charge-density", action="store", default=-0.0, type=float)
     parser.add_argument("--ein", action="store", default=80, type=float)
     parser.add_argument("--eout", action="store", default=80, type=float)

@@ -59,8 +59,8 @@ class Interface:
             total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
 
         total_pions_inside = abs(nz) * total_nions_inside / pz
-        total_nions_inside = 206
-        total_pions_inside = 206
+        # total_nions_inside = 203
+        # total_pions_inside = 203
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
         print("total_saltions_inside", total_saltions_inside)
 
