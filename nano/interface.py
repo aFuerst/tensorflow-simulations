@@ -60,7 +60,8 @@ class Interface:
         # total_nions_inside = 203
         # total_pions_inside = 203
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
-        # print("total_saltions_inside", total_saltions_inside)
+        print("Number of positive ions:", total_pions_inside)
+        print("Number of negative ions:", total_nions_inside)
 
         # express diameter in consistent units
         bigger_ion_diameter = bigger_ion_diameter / utility.unitlength # the bigger_ion_diameter can be cation or anion depending on their sizes

@@ -22,7 +22,7 @@ def initialize_particle_velocities(ion_dict, thermostats):
         avg_vel = avg_vel * (1/len(ion_dict[interface.ion_pos_str]))
 
         ion_dict[ion_vel_str] = random_vels-avg_vel
-        # ion_dict[ion_vel_str] = np.zeros(ion_dict[interface.ion_pos_str].shape, dtype=common.np_dtype)
+        ion_dict[ion_vel_str] = np.zeros(ion_dict[interface.ion_pos_str].shape, dtype=common.np_dtype)
 
     return ion_dict
 

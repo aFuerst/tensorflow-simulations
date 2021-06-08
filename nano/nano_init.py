@@ -140,7 +140,7 @@ def start_sim(tf_sess_config, args):
     print("Binning width (uniform) ", bins[0].width)
     print("Number of bins", len(bins))
     print("Number of points discretizing the left and right planar walls/interfaces/surfaces ", len(simul_box.left_plane["posvec"])," ", len(simul_box.right_plane["posvec"]))
-    # print("Number of ions ", pos_ions+neg_ions+counterions)
+    print("Number of ions ", len(ion_dict[interface.ion_pos_str])+counterions)
     # print("Number of positive ions ", pos_ions)
     # print("Number of negative ions ", neg_ions)
     print("Number of counter ions ", counterions)
