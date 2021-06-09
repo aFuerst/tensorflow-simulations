@@ -41,7 +41,6 @@ def make_thermostats(chain_length_real, ions_count, Q):
             i += 1
         # final therms is dummy therms (dummy therms always has zero mass)
         therms.append(create_thermostat(i=i, Q=0.0, T=utility.T, dof=3 * ions_count, xi=0.0, eta=0.0, hold=0.0))
-    print("_therm_constants", _therm_constants)
     return therms
 
 def update_xi_at(therms, j, dt, ke):
@@ -117,28 +116,3 @@ def bath_kinetic_energy(therms):
             # ke.append(0.5 * _therm_constants[j]["Q"] * therms[j]["xi"] * therms[j]["xi"])
     return ke_sum
 
-
-
-# if __name__ == "__main__":
-#     r = make_thremostats(5, 5)
-#     print(len(r),r)
-#     r_place, r_names = get_placeholders(r)
-#
-#     print("\n\n", r_place)
-#     feed = therms_to_feed_dict(r, r_names)
-#     print(feed, "\n\n")
-#     x = reverse_update_xi(r_place, 0.01, 200.81)
-#     x = update_eta(x, 0.01)
-#     x = forward_update_xi(x, 0.01, 200.81)
-#     print("\n result", x[0]["xi"])
-#     print(feed)
-#     sess = tf.compat.v1.Session()
-#     sess.as_default()
-#     out = sess.run(x, feed_dict=feed)
-#     print(out, "\n")
-#     ft = therms_to_feed_dict(out, r_names)
-#     out = sess.run(x, feed_dict=ft)
-#     print(out, "\n")
-#     ft = therms_to_feed_dict(out, r_names)
-#     out = sess.run(x, feed_dict=ft)
-#     print(out, "\n")
