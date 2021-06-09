@@ -11,3 +11,4 @@ class Control:
         self.validate=args.validate
         self.ein=args.ein
         self.eout=args.eout
+        self.cppfreq = args.cppfreq

@@ -131,15 +131,15 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
 
         # generate movie file
         # moviestart = 1
-        # if i >= moviestart and i % mdremote.moviefreq == 0:
+        # if i*mdremote.freq >= moviestart and (i*mdremote.freq) % mdremote.moviefreq == 0:
         #     make_movie(i, ion_dict_out, simul_box)
 
         # Write density profile
-        if (i*mdremote.freq)%mdremote.writedensity==0:
+        if (i*mdremote.freq)>mdremote.hiteqm and (i*mdremote.freq)%i*mdremote.cppfreq==0:
             no_density_profile_samples += 1
-            bins = bin.Bin().record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins)
+            bins = bin.Bin().record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins, mdremote.writedensity)
     # writer.flush()
-
+    print("Number of density samples used:", no_density_profile_samples)
     # Average_errorbars_density()
     bin.Bin().average_errorbars_density(no_density_profile_samples, ion_dict_out, simul_box, bins, utility.simul_params)
 

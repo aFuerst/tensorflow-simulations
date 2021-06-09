@@ -59,26 +59,27 @@ class Bin:
             contact_filter_1 = tf.math.logical_and(tf.math.greater_equal(z_pos, bins[len(bins)-1].lower), tf.math.less(z_pos, bins[len(bins)-1].higher))
             contact_filter_2 = tf.math.logical_and(tf.math.greater_equal(z_pos, bins[len(bins) - 2].lower),
                                                    tf.math.less(z_pos, bins[len(bins) - 2].higher))
-            # bin_nums = tf.compat.v1.where_v2(contact_filter_1, len(bins) - 1, bin_nums)
-            # bin_nums = tf.compat.v1.where_v2(contact_filter_2, len(bins) - 2, bin_nums)
+            bin_nums = tf.compat.v1.where_v2(contact_filter_1, len(bins) - 1, bin_nums)
+            bin_nums = tf.compat.v1.where_v2(contact_filter_2, len(bins) - 2, bin_nums)
             # out_bin_nums = tf.Print(bin_nums, [bin_nums[0], bins[len(bins)-1].lower, bins[len(bins)-1].higher, box.lz, bins[0].width, z_pos[0], tf.dtypes.cast((z_pos[0] + 0.5*box.lz) / bins[0].width, tf.int32)], " bin_nums")
             pos_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) / bins[0].volume
             neg_bin_density = tf.math.bincount(tf.compat.v1.boolean_mask(bin_nums, neg_charge_filter), minlength=len(bins), maxlength=len(bins), dtype=common.tf_dtype) / bins[0].volume
             # out_pos_bin_density = tf.Print(pos_bin_density,[pos_bin_density[9]],"pos_bin_density")
             return pos_bin_density, neg_bin_density
 
-    def record_densities(self, iter, pos_bin_density, neg_bin_density, no_samples, bins):
+    def record_densities(self, iter, pos_bin_density, neg_bin_density, no_samples, bins, writeDensityFreq):
         for i in range(0, len(bins)):
             bins[i].mean_pos_density += pos_bin_density[i]
             bins[i].mean_neg_density += neg_bin_density[i]
             bins[i].mean_sq_pos_density += pos_bin_density[i]*pos_bin_density[i]
             bins[i].mean_sq_neg_density += neg_bin_density[i]*neg_bin_density[i]
-        outdenp = open(os.path.join(utility.root_path,"_z+_den-{}.dat".format(iter)), 'w')
-        outdenn = open(os.path.join(utility.root_path,"_z-_den-{}.dat".format(iter)), 'w')
-        bins_sorted = sorted(bins, key=lambda x: x.midpoint, reverse=False)
-        for b in range(0, len(bins)):
-            outdenp.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_pos_density/no_samples)+"\n")
-            outdenn.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_neg_density/no_samples)+"\n")
+        if iter % writeDensityFreq == 0:
+            outdenp = open(os.path.join(utility.root_path,"_z+_den-{}.dat".format(iter)), 'w')
+            outdenn = open(os.path.join(utility.root_path,"_z-_den-{}.dat".format(iter)), 'w')
+            bins_sorted = sorted(bins, key=lambda x: x.midpoint, reverse=False)
+            for b in range(0, len(bins)):
+                outdenp.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_pos_density/no_samples)+"\n")
+                outdenn.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_neg_density/no_samples)+"\n")
         return bins
 
     def average_errorbars_density(self, density_profile_samples, ion_dict_out, simul_box, bins, simul_params):
