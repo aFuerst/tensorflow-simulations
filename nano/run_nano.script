@@ -1,0 +1,14 @@
+#!/bin/bash 
+#SBATCH --nodes=1 
+#SBATCH --ntasks-per-node=48
+#SBATCH --time=10:00:00 
+#SBATCH --partition=general 
+#SBATCH --mail-type=FAIL,BEGIN,END 
+#SBATCH --job-name=nano_full 
+#SBATCH --output=out_full_%j.log 
+#SBATCH --error=err_full_%j.log 
+cd /N/u/vinitab/BigRed3/nano 
+
+
+time python3 nano_init.py --cpu --opt -s 5000000 -f 100 -th=5 -wd 1000000 -ec 1000000  
+

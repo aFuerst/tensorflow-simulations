@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
-
-import common, utility, velocities, interface, thermostat
+from simulation import velocities, interface, thermostat
+from util import common, utility
 
 _tf_zero = tf.constant(0.0, name="const_zero", dtype=common.tf_dtype)
 

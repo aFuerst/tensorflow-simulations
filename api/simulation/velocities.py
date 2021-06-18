@@ -1,8 +1,8 @@
 import tensorflow as tf
 import numpy as np
 import math
-
-import utility, common, interface, energies
+from simulation import interface
+from util import utility, common
 
 ion_vel_str = "ion_velocities"
 
@@ -23,9 +23,7 @@ def initialize_particle_velocities(ion_dict, thermostats):
 
         ion_dict[ion_vel_str] = random_vels-avg_vel
         ion_dict[ion_vel_str] = np.zeros(ion_dict[interface.ion_pos_str].shape, dtype=common.np_dtype)
-        # print("avg_vel", np.average(ion_dict[ion_vel_str], axis=0))
-        # print("abs avg_vel", np.average(np.absolute(ion_dict[ion_vel_str]), axis=0))
-        # print("ke", energies.np_kinetic_energy(ion_dict))
+
     return ion_dict
 
 def update_velocity(ion_dict, dt: float, expfac):

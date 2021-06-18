@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
-import utility, interface, common
+from util import utility, common
+from simulation import interface
 import os
 import math
 

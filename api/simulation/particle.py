@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
-
-import utility, common, velocities, interface
+from util import common
+from simulation import velocities, interface
 
 def update_position(simul_box, ion_dict, dt: float):
     with tf.name_scope("update_position"):

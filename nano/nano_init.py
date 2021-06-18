@@ -65,14 +65,14 @@ def start_sim(tf_sess_config, args):
 
     if (mdremote.steps < 100000):  # minimum mdremote.steps is 20000
         mdremote.hiteqm = int(mdremote.steps * 0.1)
-        mdremote.writedensity = int(mdremote.steps * 0.1)
-        mdremote.extra_compute = int(mdremote.steps * 0.01)
-        mdremote.moviefreq = int(mdremote.steps * 0.001)
+        # mdremote.writedensity = int(mdremote.steps * 0.1)
+        # mdremote.extra_compute = int(mdremote.steps * 0.01)
+        # mdremote.moviefreq = int(mdremote.steps * 0.001)
     else:
         mdremote.hiteqm = int(mdremote.steps * 0.2)
-        mdremote.writedensity = int(mdremote.steps * 0.1)
-        mdremote.extra_compute = int(mdremote.steps * 0.01)
-        mdremote.moviefreq = int(mdremote.steps * 0.001)
+        # mdremote.writedensity = int(mdremote.steps * 0.1)
+        # mdremote.extra_compute = int(mdremote.steps * 0.01)
+        # mdremote.moviefreq = int(mdremote.steps * 0.001)
 
 
 
@@ -159,7 +159,8 @@ def start_sim(tf_sess_config, args):
     #     screen_bins = bin.Bin().make_bins(simul_box, bin_width,ion_dict[interface.ion_diameters_str][0])
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
+def start():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', "--cpu", action="store_true")
     parser.add_argument('-v', "--verbose", action="store_true")
