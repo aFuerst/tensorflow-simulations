@@ -137,6 +137,7 @@ def start_sim(tf_sess_config, args):
     # print("Number of negative ions ", neg_ions)
     print("Number of counter ions ", counterions)
     print("Time step in the simulation", mdremote.timestep)
+    print("Output is stored at location ", utility.root_path)
 
     md.run_md_sim(tf_sess_config, simul_box, thermos, ion_dict, charge_meshpoint, valency_counterion, mdremote, bins)
     # Starting screen factor processing

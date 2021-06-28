@@ -2,27 +2,28 @@
 
 import tensorflow as tf
 from tensorflow import keras
-import numpy as np
+from numpy import array
 import matplotlib.pyplot as plt
 from keras.optimizers import SGD
-from keras.constraints import maxnorm
-from sklearn.model_selection import StratifiedKFold
+from tensorflow.keras.constraints import max_norm
+# from sklearn.model_selection import StratifiedKFold
 import nano.utility
 
 class Surrogate:
     def __init__(self):
-        self.filename = nano.utility.root_path
+        self.filename =  "/Users/vinitaboolchandani/PhD/workspaces/ts/api/output/collectDatawhole.dat" #nano.utility.root_path
         self.train_pos = None
         self.test_pos = None
         self.train_density = None
         self.test_density = None
-        self.train_input_params = None
-        self.test_input_params = None
+        self.train_input = None
+        self.test_input = None
         self.model = None
         self.learning_rate = 0.0001
         self.epochs = 7000
         self.dropout_rate = 0.15
         self.sgd = SGD(lr=0.01, momentum=0.9)
+        self.batch_size = 100
 
     '''
     This functions loads the training data from shared path. 
@@ -44,25 +45,27 @@ class Surrogate:
             pos_val.append(list(map(float, line_arr[21:155])))
             output_density.append(list(map(float, line_arr[171:305])))
         train_size = 3 * num_rows // 5
-        train_input, test_input = input_params[0:train_size], input_params[train_size:]
+        self.train_input, self.test_input = array(input_params[0:train_size]), array(input_params[train_size:])
         train_pos, test_pos = pos_val[0:train_size], pos_val[train_size:]
         train_gt, test_gt = output_density[0:train_size], output_density[train_size:]
-        print(len(test_gt), len(test_pos))
+        print(self.train_input.shape, self.test_input.shape)
 
     def initialize_model(self):
         self.model = tf.keras.models.Sequential([
             tf.keras.layers.Dense(512, input_shape=(5,), kernel_initializer=keras.initializers.glorot_normal(seed=None),
-                                  kernel_constraint=maxnorm(3), activation="relu"),
+                                  kernel_constraint=max_norm(3), activation="relu"),
             tf.keras.layers.Dropout(self.dropout_rate),
             tf.keras.layers.Dense(256, kernel_initializer=keras.initializers.glorot_normal(seed=None),
-                                  kernel_constraint=maxnorm(3), activation="relu"),
+                                  kernel_constraint=max_norm(3), activation="relu"),
             tf.keras.layers.Dropout(self.dropout_rate),
             tf.keras.layers.Dense(134, kernel_initializer=keras.initializers.glorot_normal(seed=None),
                                   activation="linear")
         ])
 
     def train_model(self):
-        self.model.fit(self.train_input, self.train_density, epochs=self.epochs)
+        self.model.compile(optimizer='adam', loss="mean_squared_error", metrics=['accuracy'])
+        print("train input zeroth row:", self.train_input[0])
+        self.model.fit(self.train_input, self.train_density, batch_size=self.batch_size, epochs=self.epochs)
 
     def predict(self):
         prediction = self.model.predict(self.test_input)
