@@ -67,18 +67,21 @@ class Bin:
             # out_pos_bin_density = tf.Print(pos_bin_density,[pos_bin_density[9]],"pos_bin_density")
             return pos_bin_density, neg_bin_density
 
-    def record_densities(self, iter, pos_bin_density, neg_bin_density, no_samples, bins):
+    def record_densities(self, iter, pos_bin_density, neg_bin_density, no_samples, bins, writeDensityFreq):
         for i in range(0, len(bins)):
             bins[i].mean_pos_density += pos_bin_density[i]
             bins[i].mean_neg_density += neg_bin_density[i]
-            bins[i].mean_sq_pos_density += pos_bin_density[i]*pos_bin_density[i]
-            bins[i].mean_sq_neg_density += neg_bin_density[i]*neg_bin_density[i]
-        outdenp = open(os.path.join(utility.root_path,"_z+_den-{}.dat".format(iter)), 'w')
-        outdenn = open(os.path.join(utility.root_path,"_z-_den-{}.dat".format(iter)), 'w')
-        bins_sorted = sorted(bins, key=lambda x: x.midpoint, reverse=False)
-        for b in range(0, len(bins)):
-            outdenp.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_pos_density/no_samples)+"\n")
-            outdenn.write(str(bins_sorted[b].midpoint*utility.unitlength)+"\t"+str(bins_sorted[b].mean_neg_density/no_samples)+"\n")
+            bins[i].mean_sq_pos_density += pos_bin_density[i] * pos_bin_density[i]
+            bins[i].mean_sq_neg_density += neg_bin_density[i] * neg_bin_density[i]
+        if iter % writeDensityFreq == 0:
+            outdenp = open(os.path.join(utility.root_path, "_z+_den-{}.dat".format(iter)), 'w')
+            outdenn = open(os.path.join(utility.root_path, "_z-_den-{}.dat".format(iter)), 'w')
+            bins_sorted = sorted(bins, key=lambda x: x.midpoint, reverse=False)
+            for b in range(0, len(bins)):
+                outdenp.write(str(bins_sorted[b].midpoint * utility.unitlength) + "\t" + str(
+                    bins_sorted[b].mean_pos_density / no_samples) + "\n")
+                outdenn.write(str(bins_sorted[b].midpoint * utility.unitlength) + "\t" + str(
+                    bins_sorted[b].mean_neg_density / no_samples) + "\n")
         return bins
 
     def average_errorbars_density(self, density_profile_samples, ion_dict_out, simul_box, bins, simul_params):

@@ -11,7 +11,7 @@ class Main:
 
     def launch(self):
         # Start executing MD simulation steps here
-        # status = nano_init.start()
+        status = nano_init.start()
 
         # Start training the surrogate with generated data
         if True: #status:

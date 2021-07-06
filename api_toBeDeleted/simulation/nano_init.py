@@ -173,9 +173,9 @@ def start():
     parser.add_argument('-mf', "--moviefreq", action="store", default=10000, type=int)
     parser.add_argument('-he', "--hiteqm", action="store", default=100000, type=int)
     parser.add_argument('-t', "--delta-t", action="store", default=0.001, type=float)
-    parser.add_argument('-s', "--steps", action="store", default=1000000, type=int)
-    parser.add_argument('-f', "--freq", action="store", default=100, type=int)
-    parser.add_argument('-cf', "--cppfreq", action="store", default=100, type=int)
+    parser.add_argument('-s', "--steps", action="store", default=1000, type=int)
+    parser.add_argument('-f', "--freq", action="store", default=10, type=int)
+    parser.add_argument('-cf', "--cppfreq", action="store", default=100, type=int)  #do we want it?
     parser.add_argument('-wd', "--writedensity", action="store", default=100000, type=int)
     parser.add_argument('-th', "--threads", action="store", default=os.cpu_count(), type=int)
     parser.add_argument("--validate", action="store_true")

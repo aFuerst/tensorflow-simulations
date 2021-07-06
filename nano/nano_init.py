@@ -160,7 +160,7 @@ def start_sim(tf_sess_config, args):
 
 
 # if __name__ == "__main__":
-def start():
+def start(port, host):
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', "--cpu", action="store_true")
     parser.add_argument('-v', "--verbose", action="store_true")
