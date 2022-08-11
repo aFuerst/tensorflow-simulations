@@ -157,8 +157,8 @@ def _electrostatic_wall_energy(simul_box, ion_dict, wall_dictionary):
         b = (0.5 * vec_q_mul * vec_one_over_ep)[:, :, tf.newaxis]
         fqq_ion = _zero_nans(b / r)
         fqq_ion = tf.compat.v1.where_v2(tf.math.is_inf(fqq_ion, name="check_inf_values"), _tf_zero, fqq_ion, name="filter_infs")
-        fqq_ion_out = tf.Print(fqq_ion,[fqq_ion[0], fqq_ion[1]], "fqq_ion")
-        fqq = tf.math.reduce_sum(fqq_ion_out, axis=1, keepdims=True)
+        # fqq_ion_out = tf.Print(fqq_ion,[fqq_ion[0], fqq_ion[1]], "fqq_ion")
+        fqq = tf.math.reduce_sum(fqq_ion, axis=1, keepdims=True)
         return tf.math.reduce_sum((fqq + fqq_csh) * utility.scalefactor)
 
 
@@ -191,7 +191,7 @@ def energy_functional(box, charge_meshpoint, ion_dict):
         coulomb_rightwall = tf.cast(0.0, common.tf_dtype)
         coulomb_leftwall = tf.cast(0.0, common.tf_dtype)
         if charge_meshpoint != 0.0:
-            print("\n charge mesh not zero")
+            # logger.info("\n charge mesh not zero")
             coulomb_rightwall = _right_wall_columb_energy(ion_dict, box)
             coulomb_leftwall = _left_wall_columb_energy(ion_dict, box)
         potential =  _lj_energy(ion_dict, box) +_left_wall_lj_energy(ion_dict, box) + _right_wall_lj_energy(ion_dict, box) + ion_energy(ion_dict, box) + coulomb_rightwall + coulomb_leftwall

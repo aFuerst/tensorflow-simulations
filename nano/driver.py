@@ -6,9 +6,10 @@ def main():
     # master_pid = os.fork()
     # if master_pid == 0:
     master = cluster.Cluster()
-    master.config_cluster()
-    master.run_tfmd()
-    master.start_surrogate()
+    # master.config_cluster()
+    master.run_simulation()
+    # master.run_tfmd()
+    # master.start_surrogate()
     master.destroy_cluster()
 
 if __name__ == "__main__":

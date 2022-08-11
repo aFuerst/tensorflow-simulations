@@ -45,23 +45,17 @@ class Interface:
         self.lz = bz
         return
 
-    def put_saltions_inside(self, pz: int, nz: int, concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter: float, crystal_pack: bool):
-        # establish the number of inside salt ions first
-        # Note: salt concentration is the concentration of one kind of ions, also the factor of 0.6 is there in order to be consistent with units.
-
+    def put_saltions_inside(self, logger, pz: int, nz: int, concentration: float, positive_diameter_in: float, negative_diameter_in: float, counterions: int, valency_counterion: int, counterion_diameter_in: float, bigger_ion_diameter: float, crystal_pack: bool):
         volume_box = self.lx*self.ly*self.lz
-
         total_nions_inside = int((concentration * 0.6022) * (volume_box * utility.unitlength * utility.unitlength * utility.unitlength))
-
         if (total_nions_inside % pz !=0):
             total_nions_inside = total_nions_inside - (total_nions_inside % pz) + pz
-
         total_pions_inside = abs(nz) * total_nions_inside / pz
         # total_nions_inside = 203
         # total_pions_inside = 203
         total_saltions_inside = total_nions_inside + total_pions_inside + counterions
-        print("Number of positive ions:", total_pions_inside)
-        print("Number of negative ions:", total_nions_inside)
+        logger.info("Number of positive ions:"+str(total_pions_inside))
+        logger.info("Number of negative ions:"+str(total_nions_inside))
 
         # express diameter in consistent units
         bigger_ion_diameter = bigger_ion_diameter / utility.unitlength # the bigger_ion_diameter can be cation or anion depending on their sizes

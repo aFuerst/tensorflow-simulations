@@ -83,11 +83,12 @@ class Bin:
         return bins
 
     def average_errorbars_density(self, density_profile_samples, ion_dict_out, simul_box, bins, simul_params):
-        bins_sorted = sorted(bins, key=lambda x: x.midpoint, reverse=False)
+
         # 1. density profile
+        bins_sorted = sorted(bins, key=lambda x: x.midpoint, reverse=False)
         positiveion_density_profile = []
         negativeion_density_profile = []
-        for b in range (0, len(bins_sorted)):
+        for b in range(0, len(bins_sorted)):
             positiveion_density_profile.append(bins_sorted[b].mean_pos_density / density_profile_samples)
             negativeion_density_profile.append(bins_sorted[b].mean_neg_density / density_profile_samples)
 
@@ -95,27 +96,91 @@ class Bin:
         p_error_bar = []
         n_error_bar = []
         for b in range(0, len(bins_sorted)):
-            # print(b,"*******", density_profile_samples, bins_sorted[b].mean_sq_pos_density/density_profile_samples,positiveion_density_profile[b] * positiveion_density_profile[b])
             p_error_bar.append(np.sqrt(1/density_profile_samples) * np.sqrt(bins_sorted[b].mean_sq_pos_density/density_profile_samples - positiveion_density_profile[b] * positiveion_density_profile[b]))
             n_error_bar.append(np.sqrt(1/density_profile_samples) * np.sqrt(bins_sorted[b].mean_sq_neg_density/density_profile_samples - negativeion_density_profile[b] * negativeion_density_profile[b]))
 
-        # 3. write results
-        p_density_profile = "p_density_profile" + simul_params + ".dat"
-        n_density_profile = "n_density_profile" + simul_params + ".dat"
-        positiveDenistyMap = {}
-        negativeDensityMap = {}
-        f_pos = open(os.path.join(utility.root_path, p_density_profile), 'a')
-        f_neg = open(os.path.join(utility.root_path, n_density_profile), 'a')
-        for b in range(0, len(bins_sorted)):
-            stringRow_p = str(bins_sorted[b].midpoint * utility.unitlength)+"\t"+str(positiveion_density_profile[b])+"\t"+str(p_error_bar[b])+"\n"
-            positiveDenistyMap[bins_sorted[b].midpoint * utility.unitlength] = stringRow_p
-            stringRow_n = str(bins_sorted[b].midpoint * utility.unitlength)+"\t"+str(negativeion_density_profile[b])+"\t"+str(n_error_bar[b])+"\n"
-            negativeDensityMap[bins_sorted[b].midpoint * utility.unitlength] = stringRow_n
+        # 3. open files
+        p_density_profile = "p_density_profile.dat"
+        n_density_profile = "n_density_profile.dat"
+        f_pos = open(os.path.join(utility.root_path, p_density_profile), 'w')
+        f_neg = open(os.path.join(utility.root_path, n_density_profile), 'w')
+        # p_density_profile = "p_density_profile.dat"
+        # n_density_profile = "n_density_profile.dat"
+        # f_pos = open(os.path.join("input/", p_density_profile), 'a')
+        # f_neg = open(os.path.join("input/", n_density_profile), 'a')
 
-        for key in positiveDenistyMap.keys():
-            f_pos.write(positiveDenistyMap[key])
-        for key in negativeDensityMap.keys():
-            f_neg.write(negativeDensityMap[key])
+        # 4. Interpolation to have 150 density profile values always
+        z_val = [x.midpoint for x in bins_sorted]
+        left = len(z_val) // 2
+        right = len(z_val) // 2
+        while left-1 >= 0 and right+1 < len(z_val):
+            if len(z_val) >= 150:
+                break
+            positiveion_density_profile.append((positiveion_density_profile[left-1] + positiveion_density_profile[left])/2)
+            z_val.append((z_val[left-1] + z_val[left])/2)
+            p_error_bar.append((p_error_bar[left-1] + p_error_bar[left])/2)
+            negativeion_density_profile.append(
+                (negativeion_density_profile[left - 1] + negativeion_density_profile[left]) / 2)
+            n_error_bar.append((n_error_bar[left - 1] + n_error_bar[left]) / 2)
+            left -= 1
 
+            positiveion_density_profile.append((positiveion_density_profile[right + 1] + positiveion_density_profile[right]) / 2)
+            z_val.append((z_val[right + 1] + z_val[right]) / 2)
+            p_error_bar.append((p_error_bar[right + 1] + p_error_bar[right]) / 2)
+            negativeion_density_profile.append((negativeion_density_profile[right + 1] + negativeion_density_profile[right]) / 2)
+            n_error_bar.append((n_error_bar[right + 1] + n_error_bar[right]) / 2)
+            right += 1
+
+        # 5. Sort the three lists
+        sorted_zips_p = sorted(zip(z_val, positiveion_density_profile, p_error_bar), key=lambda tup: tup[0], reverse=False) #sorted(bins, key=lambda x: x.midpoint, reverse=False)
+        p_density_profile_sorted = [x for _, x, _ in sorted_zips_p]
+        p_error_bar_sorted = [x for _, _, x in sorted_zips_p]
+        sorted_zips_n = sorted(zip(z_val, negativeion_density_profile, n_error_bar),
+                               key=lambda tup: tup[0], reverse=False)
+        n_density_profile_sorted = [x for _, x, _ in sorted_zips_n]
+        n_error_bar_sorted = [x for _, _, x in sorted_zips_n]
+        z_val_sorted = [x for x, _, _ in sorted_zips_n]
+
+        # 6. Concatenated lists -> string and write to file
+        positive_strg = ' '.join(map(str, z_val_sorted + p_density_profile_sorted + p_error_bar_sorted))
+        negative_strg = ' '.join(map(str, z_val_sorted + n_density_profile_sorted + n_error_bar_sorted))
+        f_pos.write(positive_strg + "\n")  #z_val_strg + pos_den_strg + pos_err_strg + "\n")
+        f_neg.write(negative_strg + "\n")  #z_val_strg + neg_den_strg + neg_err_strg + "\n")
         f_pos.close()
         f_neg.close()
+        return
+
+
+
+
+
+
+
+
+
+
+
+
+        # string_rho_p = ""
+        # string_rho_n = ""
+        # string_midp = ""
+        # string_error_p = ""
+        # string_error_n = ""
+        # print("DEBUG:::::len(bins_sorted):", len(bins_sorted))
+        # for b in range(0, len(bins_sorted)):
+        #     # stringRow_p = str(bins_sorted[b].midpoint * utility.unitlength)+"\t"+str(positiveion_density_profile[b])+"\t"+str(p_error_bar[b])+"\n"
+        #     string_rho_p += str(positiveion_density_profile[b])+" "
+        #     string_midp += str(bins_sorted[b].midpoint * utility.unitlength)+" "
+        #     string_error_p += str(p_error_bar[b])+" "
+        #     # positiveDenistyMap[bins_sorted[b].midpoint * utility.unitlength] = stringRow_p
+        #     string_rho_n += str(negativeion_density_profile[b]) + "\t"
+        #     string_error_n += str(n_error_bar[b]) + "\t"
+        #     # stringRow_n = str(bins_sorted[b].midpoint * utility.unitlength)+"\t"+str(negativeion_density_profile[b])+"\t"+str(n_error_bar[b])+"\n"
+        #     # negativeDensityMap[bins_sorted[b].midpoint * utility.unitlength] = stringRow_n
+        # f_pos.write(string_midp + string_rho_p + string_error_p+"\n")
+        # f_neg.write(string_midp + string_rho_n + string_error_n+"\n")
+
+        # for key in positiveDenistyMap.keys():
+        #     f_pos.write(positiveDenistyMap[key])
+        # for key in negativeDensityMap.keys():
+        #     f_neg.write(negativeDensityMap[key])

@@ -1,4 +1,4 @@
-from tqdm import tqdm
+from tqdm import tqdm, trange
 import tensorflow as tf
 import time, os, shutil, datetime
 import utility, bin, forces, thermostat, velocities, particle, interface, energies, common, control
@@ -6,17 +6,17 @@ import utility, bin, forces, thermostat, velocities, particle, interface, energi
 
 ke_placeholder = tf.compat.v1.placeholder(shape=(), dtype=common.tf_dtype, name="kinetic_energy_place")
 
-def run_md_sim(config, simul_box, thermostats, ion_dict, charge_meshpoint, valency_counterion: int, mdremote, bins):
+def run_md_sim(logger, config, simul_box, thermostats, ion_dict, charge_meshpoint, valency_counterion: int, mdremote, bins):
     # TODO: better way to initialize forces, without using eval(), maybe initialize using numpy version.
     #  This is because if force is fed to session as an unevaluated tensor, the code throws an exception
     ion_dict[interface.ion_for_str] = (forces.for_md_calculate_force(simul_box, ion_dict, charge_meshpoint))[
         interface.ion_for_str].eval(session=tf.compat.v1.Session())
     initial_ke = energies.np_kinetic_energy(ion_dict)
-    print("initial KE:", initial_ke)
+    logger.info("initial KE:" + str(initial_ke))
     sess = tf.compat.v1.Session(config=config)
     sess.as_default()
     a = time.time()
-    loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, sess, thermostats, ion_dict)
+    loop(logger, charge_meshpoint, bins, simul_box, mdremote, initial_ke, sess, thermostats, ion_dict)
 
 def clean():
     if os.path.exists("output/"):
@@ -78,7 +78,7 @@ def save_useful_data(i, particle_ke, potential_energy, real_bath_ke, real_bath_p
     f_energy_file.close()
 
 # def loop(pe_g, bath_ke_g, bath_pe_g, simul_box, thermo_g, ion_g, ion_dict, tf_ion_place, thermostats, thermos_place, session, mdremote, ke_g, expfac_real_g, initial_ke, bins, pos_bin_density_g, neg_bin_density_g):
-def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, thermostats, ion_dict):
+def loop(logger, charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, thermostats, ion_dict):
     profile = True
     tf_ion_place, ion_place_copy = common.make_tf_placeholder_of_dict(ion_dict)
     thermos_place, thermo_place_copy = thermostat.get_placeholders(thermostats)
@@ -87,7 +87,7 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
         simul_box, thermos_place, tf_ion_place, mdremote, bins, charge_meshpoint)
     session.run(tf.compat.v1.global_variables_initializer())
     t2 = time.time()
-    print("initial build_graph time:", t2-t1)
+    # print("initial build_graph time:", t2-t1)
     no_density_profile_samples = 0
     planes = common.create_feed_dict((simul_box.left_plane, simul_box.tf_place_left_plane), (simul_box.right_plane, simul_box.tf_place_right_plane))
     ke_v = initial_ke
@@ -101,16 +101,15 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
         run_options = tf.compat.v1.RunOptions(trace_level=tf.compat.v1.RunOptions.FULL_TRACE)
         run_metadata = tf.compat.v1.RunMetadata()
 
-    print("\n Running MD Simulation for ",mdremote.steps," steps")
+    logger.info("\n Running MD Simulation for " + str(mdremote.steps)+" steps")
 
-    for i in tqdm(range(1, (mdremote.steps//mdremote.freq + 1))):
+    for i in trange(1, (mdremote.steps//mdremote.freq + 1), bar_format="{desc:<110}{percentage:3.0f}%|{bar}{r_bar}"):
         feed = {**planes, **ion_feed, **ft, ke_placeholder:ke_v}
         s = time.time()
         therms_out, ion_dict_out, ke_v, pe_v, bath_ke_v, bath_pe_v, expfac_real_v, pos_bin_density_v, neg_bin_density_v = session.run([thermo_g, ion_g, ke_g, pe_g, bath_ke_g, bath_pe_g, expfac_real_g, pos_bin_density_g, neg_bin_density_g], feed_dict=feed, options=run_options, run_metadata=run_metadata)
         ion_feed = common.create_feed_dict((ion_dict_out, ion_place_copy))
         ft = thermostat.therms_to_feed_dict(therms_out, thermo_place_copy)
         if mdremote.validate:
-            print("\n Entered Validation:::")
             common.throw_if_bad_boundaries(ion_dict_out[interface.ion_pos_str], simul_box)
             if (2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)) > 2:
                 raise Exception("Temperature too high! was '{}'".format(2 * ke_v / (thermostat._therm_constants[0]["dof"] * utility.kB)))
@@ -120,11 +119,14 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
             tl = timeline.Timeline(run_metadata.step_stats)
             ctf = tl.generate_chrome_trace_format()
             with open(os.path.join("output/logs/", "{}-profile_timeline.json".format(i)), 'w') as f:
-                f.write(ctf)
+                pass
+                # f.write(ctf)
         # meta_graph_def = tf.compat.v1.train.export_meta_graph(filename=os.path.join("output/logs/", 'tfmd.meta'))
 
         # compute_n_write_useful_data
-        if (i*mdremote.freq)==1 or (i*mdremote.freq)%mdremote.extra_compute == 0:
+        # if (i * mdremote.freq) == 1 or (i * mdremote.freq) % mdremote.extra_compute == 0:
+        if (i*mdremote.freq) % mdremote.extra_compute == 0:
+            print("===================================>")
             save_useful_data(i*mdremote.freq, ke_v, pe_v, bath_ke_v, bath_pe_v, utility.root_path)
             save(i*mdremote.freq,ion_dict_out,therms_out,ke_v,expfac_real_v,utility.root_path)
         # print("iteration {} done".format(i))
@@ -139,7 +141,7 @@ def loop(charge_meshpoint, bins, simul_box, mdremote, initial_ke, session, therm
             no_density_profile_samples += 1
             bins = bin.Bin().record_densities(i*mdremote.freq, pos_bin_density_v, neg_bin_density_v, no_density_profile_samples, bins, mdremote.writedensity)
     # writer.flush()
-    print("Number of density samples used:", no_density_profile_samples)
+    logger.info("Number of density samples used:" + str(no_density_profile_samples))
     # Average_errorbars_density()
     bin.Bin().average_errorbars_density(no_density_profile_samples, ion_dict_out, simul_box, bins, utility.simul_params)
 

@@ -1,0 +1,315 @@
+2021-08-27 10:44:34,569 Number of positive ions:162.0
+2021-08-27 10:44:34,569 Number of negative ions:162
+2021-08-27 10:44:34,593 From /usr/local/lib/python3.7/site-packages/tensorflow_core/python/ops/array_ops.py:1475: where (from tensorflow.python.ops.array_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.where in 2.0, which has the same broadcast rule as np.where
+2021-08-27 10:44:35,634 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:44:35,635 Charge density:-0.0
+2021-08-27 10:44:35,635 Dielectric constant of water 80
+2021-08-27 10:44:35,635 Unit length 0.65
+2021-08-27 10:44:35,635 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:44:35,635 Unit of energy 4.114486e-14
+2021-08-27 10:44:35,635 Unit time 6.280261331150549e-09
+2021-08-27 10:44:35,635 Simulation box dimensions (in reduced units) x | y | z 23.076923076923077|23.076923076923077|4.615384615384615
+2021-08-27 10:44:35,635 Box dimensions (in nanometers) x | y | z 15.0|15.0|3.0
+2021-08-27 10:44:35,635 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:44:35,635 Dielectric contrast across interfaces 0.0
+2021-08-27 10:44:35,635 Positive (+) ion valency 1.0
+2021-08-27 10:44:35,635 Negative (-) ion valency -1.0
+2021-08-27 10:44:35,635 Valency of counter ions is 1
+2021-08-27 10:44:35,635 positive ion diameter (red. units) 1.0
+2021-08-27 10:44:35,635 negative ion diameter (red. units) 1.0
+2021-08-27 10:44:35,635 counter ion diameter (red units) 1.0
+2021-08-27 10:44:35,635 In MD, charge density -0.0
+2021-08-27 10:44:35,635 Ion (salt) concentration (c) inside 0.4 M
+2021-08-27 10:44:35,635 Debye length 0.739844867158599
+2021-08-27 10:44:35,635 Mean separation between ions 1.96489598049629
+2021-08-27 10:44:35,635 Temperature (in Kelvin) 298
+2021-08-27 10:44:35,635 Binning width (uniform) 0.05016722408026755
+2021-08-27 10:44:35,635 Number of bins94
+2021-08-27 10:44:35,635 Number of points discretizing the left and right planar walls/interfaces/surfaces 1764 1764
+2021-08-27 10:44:35,635 Number of ions 324.0
+2021-08-27 10:44:35,635 Number of counter ions 0.0
+2021-08-27 10:44:35,635 Time step in the simulation0.001
+2021-08-27 10:44:36,170 initial KE:0.0
+2021-08-27 10:44:39,600 
+ Running MD Simulation for 100 steps
+2021-08-27 10:44:47,639 Number of density samples used:9
+2021-08-27 10:44:47,712 Number of positive ions:99.0
+2021-08-27 10:44:47,712 Number of negative ions:99
+2021-08-27 10:44:47,989 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:44:47,989 Charge density:-0.0
+2021-08-27 10:44:47,989 Dielectric constant of water 80
+2021-08-27 10:44:47,989 Unit length 0.714
+2021-08-27 10:44:47,989 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:44:47,989 Unit of energy 4.114486e-14
+2021-08-27 10:44:47,990 Unit time 6.898625523756142e-09
+2021-08-27 10:44:47,990 Simulation box dimensions (in reduced units) x | y | z 14.005602240896359|14.005602240896359|4.201680672268908
+2021-08-27 10:44:47,990 Box dimensions (in nanometers) x | y | z 10.0|10.0|3.0
+2021-08-27 10:44:47,990 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:44:47,990 Dielectric contrast across interfaces 0.0
+2021-08-27 10:44:47,990 Positive (+) ion valency 1.0
+2021-08-27 10:44:47,990 Negative (-) ion valency -1.0
+2021-08-27 10:44:47,990 Valency of counter ions is 1
+2021-08-27 10:44:47,990 positive ion diameter (red. units) 1.0
+2021-08-27 10:44:47,990 negative ion diameter (red. units) 1.0
+2021-08-27 10:44:47,990 counter ion diameter (red units) 1.0
+2021-08-27 10:44:47,990 In MD, charge density -0.0
+2021-08-27 10:44:47,990 Ion (salt) concentration (c) inside 0.55 M
+2021-08-27 10:44:47,990 Debye length 0.5743868133650006
+2021-08-27 10:44:47,990 Mean separation between ions 1.608621280538491
+2021-08-27 10:44:47,990 Temperature (in Kelvin) 298
+2021-08-27 10:44:47,990 Binning width (uniform) 0.050020008003201284
+2021-08-27 10:44:47,990 Number of bins86
+2021-08-27 10:44:47,990 Number of points discretizing the left and right planar walls/interfaces/surfaces 784 784
+2021-08-27 10:44:47,990 Number of ions 198.0
+2021-08-27 10:44:47,990 Number of counter ions 0.0
+2021-08-27 10:44:47,990 Time step in the simulation0.001
+2021-08-27 10:44:48,592 initial KE:0.0
+2021-08-27 10:44:52,725 
+ Running MD Simulation for 100 steps
+2021-08-27 10:45:03,482 Number of density samples used:9
+2021-08-27 10:45:03,588 Number of positive ions:153.0
+2021-08-27 10:45:03,588 Number of negative ions:153
+2021-08-27 10:45:03,846 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:45:03,846 Charge density:-0.0
+2021-08-27 10:45:03,846 Dielectric constant of water 80
+2021-08-27 10:45:03,846 Unit length 0.714
+2021-08-27 10:45:03,846 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:45:03,846 Unit of energy 4.114486e-14
+2021-08-27 10:45:03,846 Unit time 6.898625523756142e-09
+2021-08-27 10:45:03,846 Simulation box dimensions (in reduced units) x | y | z 14.005602240896359|14.005602240896359|4.201680672268908
+2021-08-27 10:45:03,846 Box dimensions (in nanometers) x | y | z 10.0|10.0|3.0
+2021-08-27 10:45:03,846 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:45:03,846 Dielectric contrast across interfaces 0.0
+2021-08-27 10:45:03,846 Positive (+) ion valency 1.0
+2021-08-27 10:45:03,846 Negative (-) ion valency -1.0
+2021-08-27 10:45:03,846 Valency of counter ions is 1
+2021-08-27 10:45:03,846 positive ion diameter (red. units) 1.0
+2021-08-27 10:45:03,846 negative ion diameter (red. units) 1.0
+2021-08-27 10:45:03,846 counter ion diameter (red units) 1.0
+2021-08-27 10:45:03,846 In MD, charge density -0.0
+2021-08-27 10:45:03,847 Ion (salt) concentration (c) inside 0.85 M
+2021-08-27 10:45:03,847 Debye length 0.46203656113569
+2021-08-27 10:45:03,847 Mean separation between ions 1.3913457453206781
+2021-08-27 10:45:03,847 Temperature (in Kelvin) 298
+2021-08-27 10:45:03,847 Binning width (uniform) 0.050020008003201284
+2021-08-27 10:45:03,847 Number of bins86
+2021-08-27 10:45:03,847 Number of points discretizing the left and right planar walls/interfaces/surfaces 784 784
+2021-08-27 10:45:03,847 Number of ions 306.0
+2021-08-27 10:45:03,847 Number of counter ions 0.0
+2021-08-27 10:45:03,847 Time step in the simulation0.001
+2021-08-27 10:45:04,976 initial KE:0.0
+2021-08-27 10:45:10,005 
+ Running MD Simulation for 100 steps
+2021-08-27 10:45:24,784 Number of density samples used:9
+2021-08-27 10:45:24,929 Number of positive ions:182.0
+2021-08-27 10:45:24,929 Number of negative ions:182
+2021-08-27 10:45:25,233 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:45:25,233 Charge density:-0.0
+2021-08-27 10:45:25,233 Dielectric constant of water 80
+2021-08-27 10:45:25,233 Unit length 0.5
+2021-08-27 10:45:25,233 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:45:25,233 Unit of energy 4.114486e-14
+2021-08-27 10:45:25,233 Unit time 4.830970254731193e-09
+2021-08-27 10:45:25,233 Simulation box dimensions (in reduced units) x | y | z 30.0|30.0|6.0
+2021-08-27 10:45:25,233 Box dimensions (in nanometers) x | y | z 15.0|15.0|3.0
+2021-08-27 10:45:25,233 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:45:25,233 Dielectric contrast across interfaces 0.0
+2021-08-27 10:45:25,233 Positive (+) ion valency 1.0
+2021-08-27 10:45:25,233 Negative (-) ion valency -1.0
+2021-08-27 10:45:25,233 Valency of counter ions is 1
+2021-08-27 10:45:25,233 positive ion diameter (red. units) 1.0
+2021-08-27 10:45:25,234 negative ion diameter (red. units) 1.0
+2021-08-27 10:45:25,234 counter ion diameter (red units) 1.0
+2021-08-27 10:45:25,234 In MD, charge density -0.0
+2021-08-27 10:45:25,234 Ion (salt) concentration (c) inside 0.45 M
+2021-08-27 10:45:25,234 Debye length 0.9067921591627703
+2021-08-27 10:45:25,234 Mean separation between ions 2.456020999093591
+2021-08-27 10:45:25,234 Temperature (in Kelvin) 298
+2021-08-27 10:45:25,234 Binning width (uniform) 0.05
+2021-08-27 10:45:25,234 Number of bins122
+2021-08-27 10:45:25,234 Number of points discretizing the left and right planar walls/interfaces/surfaces 1764 1764
+2021-08-27 10:45:25,234 Number of ions 364.0
+2021-08-27 10:45:25,234 Number of counter ions 0.0
+2021-08-27 10:45:25,234 Time step in the simulation0.001
+2021-08-27 10:45:26,989 initial KE:0.0
+2021-08-27 10:45:32,946 
+ Running MD Simulation for 100 steps
+2021-08-27 10:45:53,121 Number of density samples used:9
+2021-08-27 10:45:53,310 Number of positive ions:126.0
+2021-08-27 10:45:53,310 Number of negative ions:126
+2021-08-27 10:45:53,623 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:45:53,623 Charge density:-0.0
+2021-08-27 10:45:53,624 Dielectric constant of water 80
+2021-08-27 10:45:53,624 Unit length 0.714
+2021-08-27 10:45:53,624 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:45:53,624 Unit of energy 4.114486e-14
+2021-08-27 10:45:53,624 Unit time 6.898625523756142e-09
+2021-08-27 10:45:53,624 Simulation box dimensions (in reduced units) x | y | z 14.005602240896359|14.005602240896359|4.201680672268908
+2021-08-27 10:45:53,624 Box dimensions (in nanometers) x | y | z 10.0|10.0|3.0
+2021-08-27 10:45:53,624 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:45:53,624 Dielectric contrast across interfaces 0.0
+2021-08-27 10:45:53,624 Positive (+) ion valency 1.0
+2021-08-27 10:45:53,624 Negative (-) ion valency -1.0
+2021-08-27 10:45:53,624 Valency of counter ions is 1
+2021-08-27 10:45:53,624 positive ion diameter (red. units) 1.0
+2021-08-27 10:45:53,624 negative ion diameter (red. units) 1.0
+2021-08-27 10:45:53,624 counter ion diameter (red units) 1.0
+2021-08-27 10:45:53,624 In MD, charge density -0.0
+2021-08-27 10:45:53,624 Ion (salt) concentration (c) inside 0.7 M
+2021-08-27 10:45:53,624 Debye length 0.5091394928871655
+2021-08-27 10:45:53,624 Mean separation between ions 1.4843695139332305
+2021-08-27 10:45:53,624 Temperature (in Kelvin) 298
+2021-08-27 10:45:53,624 Binning width (uniform) 0.050020008003201284
+2021-08-27 10:45:53,624 Number of bins86
+2021-08-27 10:45:53,624 Number of points discretizing the left and right planar walls/interfaces/surfaces 784 784
+2021-08-27 10:45:53,624 Number of ions 252.0
+2021-08-27 10:45:53,624 Number of counter ions 0.0
+2021-08-27 10:45:53,624 Time step in the simulation0.001
+2021-08-27 10:45:55,393 initial KE:0.0
+2021-08-27 10:46:01,815 
+ Running MD Simulation for 100 steps
+2021-08-27 10:46:23,796 Number of density samples used:9
+2021-08-27 10:46:24,054 Number of positive ions:108.0
+2021-08-27 10:46:24,054 Number of negative ions:108
+2021-08-27 10:46:24,349 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:46:24,349 Charge density:-0.0
+2021-08-27 10:46:24,349 Dielectric constant of water 80
+2021-08-27 10:46:24,349 Unit length 0.5
+2021-08-27 10:46:24,349 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:46:24,349 Unit of energy 4.114486e-14
+2021-08-27 10:46:24,349 Unit time 4.830970254731193e-09
+2021-08-27 10:46:24,349 Simulation box dimensions (in reduced units) x | y | z 20.0|20.0|6.0
+2021-08-27 10:46:24,349 Box dimensions (in nanometers) x | y | z 10.0|10.0|3.0
+2021-08-27 10:46:24,349 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:46:24,349 Dielectric contrast across interfaces 0.0
+2021-08-27 10:46:24,349 Positive (+) ion valency 1.0
+2021-08-27 10:46:24,349 Negative (-) ion valency -1.0
+2021-08-27 10:46:24,349 Valency of counter ions is 1
+2021-08-27 10:46:24,349 positive ion diameter (red. units) 1.0
+2021-08-27 10:46:24,349 negative ion diameter (red. units) 1.0
+2021-08-27 10:46:24,349 counter ion diameter (red units) 1.0
+2021-08-27 10:46:24,349 In MD, charge density -0.0
+2021-08-27 10:46:24,349 Ion (salt) concentration (c) inside 0.6 M
+2021-08-27 10:46:24,350 Debye length 0.785305045787501
+2021-08-27 10:46:24,350 Mean separation between ions 2.231443166940565
+2021-08-27 10:46:24,350 Temperature (in Kelvin) 298
+2021-08-27 10:46:24,350 Binning width (uniform) 0.05
+2021-08-27 10:46:24,350 Number of bins122
+2021-08-27 10:46:24,350 Number of points discretizing the left and right planar walls/interfaces/surfaces 784 784
+2021-08-27 10:46:24,350 Number of ions 216.0
+2021-08-27 10:46:24,350 Number of counter ions 0.0
+2021-08-27 10:46:24,350 Time step in the simulation0.001
+2021-08-27 10:46:26,310 initial KE:0.0
+2021-08-27 10:46:32,880 
+ Running MD Simulation for 100 steps
+2021-08-27 10:46:58,193 Number of density samples used:9
+2021-08-27 10:46:58,450 Number of positive ions:108.0
+2021-08-27 10:46:58,450 Number of negative ions:108
+2021-08-27 10:46:58,719 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:46:58,719 Charge density:-0.0
+2021-08-27 10:46:58,719 Dielectric constant of water 80
+2021-08-27 10:46:58,719 Unit length 0.55
+2021-08-27 10:46:58,719 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:46:58,719 Unit of energy 4.114486e-14
+2021-08-27 10:46:58,719 Unit time 5.314067280204312e-09
+2021-08-27 10:46:58,719 Simulation box dimensions (in reduced units) x | y | z 18.18181818181818|18.18181818181818|5.454545454545454
+2021-08-27 10:46:58,719 Box dimensions (in nanometers) x | y | z 10.0|10.0|3.0
+2021-08-27 10:46:58,719 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:46:58,719 Dielectric contrast across interfaces 0.0
+2021-08-27 10:46:58,719 Positive (+) ion valency 1.0
+2021-08-27 10:46:58,719 Negative (-) ion valency -1.0
+2021-08-27 10:46:58,719 Valency of counter ions is 1
+2021-08-27 10:46:58,719 positive ion diameter (red. units) 1.0
+2021-08-27 10:46:58,719 negative ion diameter (red. units) 1.0
+2021-08-27 10:46:58,719 counter ion diameter (red units) 1.0
+2021-08-27 10:46:58,719 In MD, charge density -0.0
+2021-08-27 10:46:58,719 Ion (salt) concentration (c) inside 0.6 M
+2021-08-27 10:46:58,719 Debye length 0.7139136779886373
+2021-08-27 10:46:58,719 Mean separation between ions 2.028584697218695
+2021-08-27 10:46:58,719 Temperature (in Kelvin) 298
+2021-08-27 10:46:58,719 Binning width (uniform) 0.0500417014178482
+2021-08-27 10:46:58,719 Number of bins111
+2021-08-27 10:46:58,719 Number of points discretizing the left and right planar walls/interfaces/surfaces 784 784
+2021-08-27 10:46:58,720 Number of ions 216.0
+2021-08-27 10:46:58,720 Number of counter ions 0.0
+2021-08-27 10:46:58,720 Time step in the simulation0.001
+2021-08-27 10:47:01,339 initial KE:0.0
+2021-08-27 10:47:09,997 
+ Running MD Simulation for 100 steps
+2021-08-27 10:47:39,360 Number of density samples used:9
+2021-08-27 10:47:39,716 Number of positive ions:108.0
+2021-08-27 10:47:39,716 Number of negative ions:108
+2021-08-27 10:47:39,993 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:47:39,993 Charge density:-0.0
+2021-08-27 10:47:39,993 Dielectric constant of water 80
+2021-08-27 10:47:39,993 Unit length 0.7
+2021-08-27 10:47:39,993 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:47:39,993 Unit of energy 4.114486e-14
+2021-08-27 10:47:39,993 Unit time 6.763358356623669e-09
+2021-08-27 10:47:39,993 Simulation box dimensions (in reduced units) x | y | z 14.285714285714286|14.285714285714286|4.285714285714286
+2021-08-27 10:47:39,993 Box dimensions (in nanometers) x | y | z 10.0|10.0|3.0
+2021-08-27 10:47:39,993 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:47:39,993 Dielectric contrast across interfaces 0.0
+2021-08-27 10:47:39,993 Positive (+) ion valency 1.0
+2021-08-27 10:47:39,994 Negative (-) ion valency -1.0
+2021-08-27 10:47:39,994 Valency of counter ions is 1
+2021-08-27 10:47:39,994 positive ion diameter (red. units) 1.0
+2021-08-27 10:47:39,994 negative ion diameter (red. units) 1.0
+2021-08-27 10:47:39,994 counter ion diameter (red units) 1.0
+2021-08-27 10:47:39,994 In MD, charge density -0.0
+2021-08-27 10:47:39,994 Ion (salt) concentration (c) inside 0.6 M
+2021-08-27 10:47:39,994 Debye length 0.5609321755625007
+2021-08-27 10:47:39,994 Mean separation between ions 1.593887976386118
+2021-08-27 10:47:39,994 Temperature (in Kelvin) 298
+2021-08-27 10:47:39,994 Binning width (uniform) 0.05042016806722689
+2021-08-27 10:47:39,994 Number of bins87
+2021-08-27 10:47:39,994 Number of points discretizing the left and right planar walls/interfaces/surfaces 784 784
+2021-08-27 10:47:39,994 Number of ions 216.0
+2021-08-27 10:47:39,994 Number of counter ions 0.0
+2021-08-27 10:47:39,994 Time step in the simulation0.001
+2021-08-27 10:47:43,011 initial KE:0.0
+2021-08-27 10:47:51,126 
+ Running MD Simulation for 100 steps
+2021-08-27 10:48:20,315 Number of density samples used:9
+2021-08-27 10:48:20,662 Number of positive ions:142.0
+2021-08-27 10:48:20,662 Number of negative ions:142
+2021-08-27 10:48:20,955 Total_surface_charge:-0.0
+charge_meshpoint:-0.0
+2021-08-27 10:48:20,955 Charge density:-0.0
+2021-08-27 10:48:20,955 Dielectric constant of water 80
+2021-08-27 10:48:20,955 Unit length 0.553
+2021-08-27 10:48:20,955 Unit of mass 3.8409999999999993e-23
+2021-08-27 10:48:20,955 Unit of energy 4.114486e-14
+2021-08-27 10:48:20,955 Unit time 5.343053101732699e-09
+2021-08-27 10:48:20,955 Simulation box dimensions (in reduced units) x | y | z 27.124773960216995|27.124773960216995|5.424954792043399
+2021-08-27 10:48:20,955 Box dimensions (in nanometers) x | y | z 15.0|15.0|3.0
+2021-08-27 10:48:20,955 Permittivity inside and outside the confinement (channel) 80,80
+2021-08-27 10:48:20,955 Dielectric contrast across interfaces 0.0
+2021-08-27 10:48:20,955 Positive (+) ion valency 1.0
+2021-08-27 10:48:20,955 Negative (-) ion valency -1.0
+2021-08-27 10:48:20,955 Valency of counter ions is 1
+2021-08-27 10:48:20,955 positive ion diameter (red. units) 1.0
+2021-08-27 10:48:20,955 negative ion diameter (red. units) 1.0
+2021-08-27 10:48:20,956 counter ion diameter (red units) 1.0
+2021-08-27 10:48:20,956 In MD, charge density -0.0
+2021-08-27 10:48:20,956 Ion (salt) concentration (c) inside 0.35 M
+2021-08-27 10:48:20,956 Debye length 0.9296615386081077
+2021-08-27 10:48:20,956 Mean separation between ions 2.4146736257661163
+2021-08-27 10:48:20,956 Temperature (in Kelvin) 298
+2021-08-27 10:48:20,956 Binning width (uniform) 0.05023106288929074
+2021-08-27 10:48:20,956 Number of bins110
+2021-08-27 10:48:20,956 Number of points discretizing the left and right planar walls/interfaces/surfaces 1764 1764
+2021-08-27 10:48:20,956 Number of ions 284.0
+2021-08-27 10:48:20,956 Number of counter ions 0.0
+2021-08-27 10:48:20,956 Time step in the simulation0.001
+2021-08-27 10:48:24,109 initial KE:0.0

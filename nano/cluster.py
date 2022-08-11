@@ -6,13 +6,14 @@ import dill
 import os, signal
 import time
 import configparser
-import server
+# import server
 import importlib
+import data_generator, nano_init, surrogate
 
 class Cluster:
     def __init__(self):
-        self.ready_to_train = False
-        self.acceptable_loss = 0
+        self.training_complete = False
+        self.threshold_loss = 0.0001
         self.serverport = 0
         self.serverhost = 0
         self.ready_to_predict = False
@@ -20,66 +21,91 @@ class Cluster:
         self.surrogate_function = ''
         self.tfmd_function = ''
         self.train_volume = 0
-
+        self.datagenerator_obj = data_generator.Data_generator()
+        self.surrogate_obj = surrogate.Surrogate()
+        self.tfmd_obj = nano_init.MdSimulation()
+        self.density_profile_file = ''
+        # self.parser = configparser.ConfigParser()
+        self.config_cluster()
         return
 
     def config_cluster(self):
-        config = configparser.ConfigParser()
-        config.read('config.ini')
-        self.serverport = config.getint('DEFAULT', 'server_port')
-        self.hostname = config['DEFAULT']['host']
-        self.surrogate_function = config['DEFAULT']['surrogate_function']
-        self.surrogateclass = config['DEFAULT']['surrogate_class']
-        self.tfmd_function = config['DEFAULT']['tfmd_function']
-        self.tfmdclass = config['DEFAULT']['tfmd_class']
+        self.config = configparser.ConfigParser()
+        self.config.read('config.ini')
+        self.serverport = self.config.getint('DEFAULT', 'server_port')
+        self.hostname = self.config['DEFAULT']['host']
+        self.surrogate_function = self.config['DEFAULT']['surrogate_function']
+        self.surrogateclass = self.config['DEFAULT']['surrogate_class']
+        self.tfmd_function = self.config['DEFAULT']['tfmd_function']
+        self.tfmdclass = self.config['DEFAULT']['tfmd_class']
+        self.density_profile_file = self.config['DEFAULT']['density_profile']
+        self.input_file = self.config['DEFAULT']['input_file']
         return
 
-    def run_input_datagenerator(self):
-        while not self.ready_to_train :
-            res = self.generate_bulk_input()
-            # keeping it simple for now. This can be changed to incremental data generation later on
-            self.ready_to_train = res
+    def run_simulation(self):
+        print("Checking if Model is trained:", self.training_complete)
+        # if not self.training_complete:
+        average_loss = 1.0
+        while not self.training_complete:
+            data_chunk = self.datagenerator_obj.generate_bulk_input()
 
+            # Starting MD Simulation on some systems to generate density profiles
+            self.tfmd_obj.start(data_chunk[0:4]) #, self.input_file)
 
-    def generate_bulk_input(self):
-        for Z_val in [3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0]:
-            for p_val in [1, 2, 3]:
-                for n_val in [-1, - 2]:
-                    for c_val in [0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]:
-                        for d_val in [0.5, 0.55, 0.553, 0.6, 0.65, 0.7, 0.714, 0.75]:
-                            # save in a variable here
-                            pass
+            # Train the surrogate on generated density profiles
+            average_loss = self.surrogate_obj.train_model()
+            print("Average loss:", average_loss, "threshold_loss:", self.threshold_loss)
 
-    def run_tfmd(self):
-        self.tfmd_function = dill.dumps(getattr(__import__(self.tfmdclass), self.tfmd_function))
-        tfmd_pid = os.fork()
-        if tfmd_pid == 0:
-            run_tfmd = dill.loads(self.tfmd_function)
-            input_data_size = run_tfmd(self.serverport, self.serverhost)
-            if input_data_size > self.train_volume:
-                self.ready_to_train = True
-            else:
-                # TODO: generate more input data
-                pass
-        else:
-            # Main thread does nothing else for now
-            pass
+            # Check if more training is needed
+            if average_loss <= self.threshold_loss:
+                self.training_complete = True
+                print("Training completion ::", self.training_complete)
+                self.config.set('DEFAULT', 'training_complete', 'True')
+                with open('config.ini', 'w') as configfile:
+                    self.config.write(configfile)
+
+        # else:
+        prediction_res = self.surrogate_obj.predict(lis=[3.8, 3, -1, 0.55, 0.700], filename=self.density_profile_file)
+        return prediction_res
+
+    def start_tfmd(self):
+        nano_init.start(self.serverport, self.serverhost)
+
 
     def start_surrogate(self):
-        self.surrogate_function = dill.dumps(getattr(__import__(self.surrogateclass), self.surrogate_function))
-        surrogate_pid = os.fork()
-        if surrogate_pid == 0:
-            surrogate_func = dill.loads(self.surrogate_function)
-            average_loss = surrogate_func(self.serverport, self.serverhost)
-            if average_loss <= self.acceptable_loss:
-                self.ready_to_predict = True
-            else:
-                # TODO: generate more input data
-                pass
-        else:
-            # Main thread does nothing else for now
-            pass
+        # components = self.surrogateclass.split('.')
+        # module = __import__(components[0])
+        # for cls in components[1:]:
+        #     module = getattr(module, cls)
+        # self_inst = module()
+        # module = getattr(module, self.surrogate_function)
+        # self.surrogate_function = dill.dumps(module)
+        # print("module::", module)
+        # surrogate_pid = os.fork()
+        # if surrogate_pid == 0:
+        #     surrogate_func = dill.loads(self.surrogate_function)
+        #     average_loss = surrogate_func(self_inst, self.serverport, self.serverhost)
+        # else:
+        #     # Main thread does nothing else for now
+        #     pass
+        average_loss = self.surrogate_obj.run_surrogate(self.serverport, self.serverhost)
+
 
     def destroy_cluster(self):
         # os.killpg(os.getpid(), signal.SIGTERM)
         pass
+
+    # [DEFAULT]
+    # server_port = 12000
+    # host = 127.0
+    # .0
+    # .1
+    # surrogate_function = run_surrogate
+    # surrogate_class = surrogate.Surrogate
+    # tfmd_function = start
+    # tfmd_class = nano_init
+    # density_profile = output / predict / density_profile.dat
+    # training_complete = False
+    # threshold_loss = 0.5
+
+

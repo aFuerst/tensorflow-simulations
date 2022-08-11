@@ -14,3 +14,5 @@ elj = 1.0
 pi = 3.141593
 root_path=''
 simul_params = ""
+log_path = "logs/"
+system_params = ""
