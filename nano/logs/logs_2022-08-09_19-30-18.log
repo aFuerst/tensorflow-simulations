@@ -1,0 +1,5 @@
+2022-08-09 19:30:18,973 Number of positive ions:121.0
+2022-08-09 19:30:18,973 Number of negative ions:121
+2022-08-09 19:30:18,992 From /Library/Python/3.7/site-packages/tensorflow/python/ops/array_ops.py:1354: add_dispatch_support.<locals>.wrapper (from tensorflow.python.ops.array_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.where in 2.0, which has the same broadcast rule as np.where

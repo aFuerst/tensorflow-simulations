@@ -1,0 +1,27 @@
+#!/bin/bash
+
+#SBATCH -J nano_400_100k
+#SBATCH -p general 
+#SBATCH -o nano_%j.txt
+#SBATCH -e nano_%j.err
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=vinitab@iu.edu
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=48
+#SBATCH --time=10:00:00
+
+
+echo 'Running command : time python3 nano_init.py -s 100000 --cpu -th=1\n'
+time python3 nano_init.py -s 100000 -f 100 --opt --cpu -th=1
+
+echo 'Running command : time python3 nano_init.py -s 100000 --cpu -th=2\n'
+time python3 nano_init.py -s 100000 -f 100 --cpu --opt -th=2 
+
+echo 'Running command : time python3 nano_init.py -s 100000 --cpu -th=3\n'
+time python3 nano_init.py -s 100000 -f 100 --cpu --opt -th=3
+
+echo 'Running command : time python3 nano_init.py -s 100000 --cpu -th=4\n'
+time python3 nano_init.py -s 100000 -f 100 --cpu --opt -th=4
+
+echo 'Running command : time python3 nano_init.py -s 100000 --cpu -th=5\n'
+time python3 nano_init.py -s 100000 -f 100 --cpu --opt -th=5
